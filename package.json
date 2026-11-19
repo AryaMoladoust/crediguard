@@ -1,3 +1,4 @@
+
 {
   "name": "mobiler-suite",
   "version": "1.0.0",
@@ -12,8 +13,7 @@
     "seed": "node --env-file=.env.local scripts/seed.mjs",
     "seed:orders": "node --env-file=.env.local scripts/seed-orders.mjs",
     "seed:refresh": "node --env-file=.env.local scripts/refresh-demo-catalog.mjs",
-    "import:bureau": "node --env-file=.env.local scripts/import-credit-bureau.mjs"0
-    
+    "import:bureau": "node --env-file=.env.local scripts/import-credit-bureau.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
