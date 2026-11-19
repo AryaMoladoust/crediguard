@@ -1,7 +1,7 @@
 export type Locale = "fa" | "en";
 export const messages = {
   fa: {
-    brand: "اعتباریار", dashboard: "داشبورد", sales: "فروش", customers: "مشتریان خرید اقساطی",
+    brand: "موبایلر", dashboard: "داشبورد", sales: "فروش", customers: "مشتریان خرید اقساطی",
     installments: "مدیریت اقساط", risk: "اعتبار و ریسک", inventory: "مدیریت انبار",
     users: "مدیریت کاربران", activity: "فعالیت‌ها و وظایف", finance: "مدیریت مالی",
     integrations: "اتصال و API", notifications: "اعلان‌ها", subscription: "اشتراک و طرح‌ها",
@@ -11,7 +11,7 @@ export const messages = {
     logout: "خروج از حساب", admin: "مدیر سامانه", online: "آنلاین", notificationsShort: "اعلان",
   },
   en: {
-    brand: "CreditYar", dashboard: "Dashboard", sales: "Sales", customers: "Installment customers",
+    brand: "Mobiler", dashboard: "Dashboard", sales: "Sales", customers: "Installment customers",
     installments: "Installments", risk: "Credit & Risk", inventory: "Inventory management",
     users: "User management", activity: "Activity & Tasks", finance: "Financial management",
     integrations: "Integrations & API", notifications: "Notifications", subscription: "Plans & Billing",

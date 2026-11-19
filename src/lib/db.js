@@ -7,7 +7,7 @@ export async function connectDB() {
   if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI تنظیم نشده است');
   g._mobiler.promise ||= mongoose
     .connect(process.env.MONGODB_URI, {
-      dbName: 'mobiler',
+      dbName: 'mobiler_db',
       serverSelectionTimeoutMS: 5000,
       maxPoolSize: 5
     })

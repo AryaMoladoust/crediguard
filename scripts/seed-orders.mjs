@@ -5,7 +5,7 @@ import Product from '../src/models/Product.js';
 import Order from '../src/models/Order.js';
 
 if (!process.env.MONGODB_URI) { console.error('MONGODB_URI در .env.local تنظیم نشده است'); process.exit(1); }
-await mongoose.connect(process.env.MONGODB_URI, { dbName: 'mobiler', serverSelectionTimeoutMS: 8000 });
+await mongoose.connect(process.env.MONGODB_URI, { dbName: 'mobiler_db', serverSelectionTimeoutMS: 8000 });
 
 const existing = await Order.countDocuments();
 if (existing > 0 && !process.argv.includes('--force')) {

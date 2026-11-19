@@ -1,20 +1,17 @@
 import { Vazirmatn } from 'next/font/google';
 import './globals.css';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 
 const vazir = Vazirmatn({ subsets: ['arabic', 'latin'], variable: '--font-vazir' });
-export const metadata = { title: 'موبایلر | فروشگاه لوازم الکترونیکی', description: 'گوشی، لپ‌تاپ، هدفون و لوازم جانبی با موجودی لحظه‌ای' };
+export const metadata = {
+  title: 'موبایلر | فروشگاه لوازم الکترونیکی',
+  description: 'فروشگاه نمایشی موبایلر؛ گوشی، لپ‌تاپ، هدفون و لوازم جانبی با نمایش موجودی انبار'
+};
 
-// Root Layout فروشگاه (جدا از پنل مدیریت)
+// هدر و فوتر اختصاصی داخل Storefront قرار دارند؛ از نمایش نسخه قدیمی و تکراری جلوگیری می‌کنیم.
 export default function ShopRootLayout({ children }) {
   return (
     <html lang="fa" dir="rtl">
-      <body className={`${vazir.variable} font-sans`}>
-        <Header />
-        <main>{children}</main>
-        <Footer />
-      </body>
+      <body className={`${vazir.variable} font-sans`}>{children}</body>
     </html>
   );
 }

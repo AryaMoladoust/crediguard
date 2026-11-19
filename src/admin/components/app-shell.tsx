@@ -17,7 +17,7 @@ const iconMap: Record<string, React.ElementType> = {
   integrations: Plug, notifications: Bell, subscription: Tag, settings: Settings,
 };
 const routes = [
-  { key: "dashboard", href: "/admin/admin", icon: "dashboard" },
+  { key: "dashboard", href: "/admin", icon: "dashboard" },
   { key: "sales", href: "/admin/sales", icon: "sales" },
   { key: "customers", href: "/admin/customers", icon: "customers", children: [
     { labelFa: "همه مشتریان", labelEn: "All customers", href: "/admin/customers" },
@@ -37,7 +37,7 @@ const routes = [
   { key: "settings", href: "/admin/settings", icon: "settings" },
 ];
 const searchable = [
-  { title: "داشبورد", en: "Dashboard", href: "/admin/admin", desc: "نمای کلی سامانه" },
+  { title: "داشبورد", en: "Dashboard", href: "/admin", desc: "نمای کلی سامانه" },
   { title: "مشتریان خرید اقساطی", en: "Installment customers", href: "/admin/customers", desc: "پروفایل و وضعیت مشتریان" },
   { title: "مشتریان معوق", en: "Overdue customers", href: "/admin/customers/overdue", desc: "پیگیری بدهی‌های سررسیدشده" },
   { title: "مشتریان مسدود", en: "Blocked customers", href: "/admin/customers/blocked", desc: "فهرست حساب‌های مسدود" },
@@ -68,7 +68,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return <div className={`app-frame ${mobileOpen ? "mobile-nav-open" : ""}`}>
     {mobileOpen && <button className="mobile-scrim" onClick={() => setMobileOpen(false)} aria-label="بستن منو"/>}
     <aside className="sidebar">
-      <div className="brand-row"><div className="brand-symbol"><ShieldCheck size={21}/></div><div className="brand-copy"><strong>{t("brand")}</strong><span>{isFa ? "سامانه هوشمند اعتبار" : "Smart credit platform"}</span></div><button className="mobile-close icon-button" onClick={() => setMobileOpen(false)}><X size={18}/></button></div>
+      <div className="brand-row"><div className="brand-symbol"><ShieldCheck size={21}/></div><div className="brand-copy"><strong>{t("brand")}</strong><span>{isFa ? "مدیریت هوشمند فروشگاه" : "Smart store management"}</span></div><button className="mobile-close icon-button" onClick={() => setMobileOpen(false)}><X size={18}/></button></div>
       <div className="workspace-switch"><span className="workspace-logo">A</span><div><b>{isFa ? "موبایلر" : "Mobiler"}</b><small>{isFa ? "فضای کاری اصلی" : "Main workspace"}</small></div><ChevronDown size={15}/></div>
       <div className="nav-caption">{isFa ? "فضای کاری" : "WORKSPACE"}</div>
       <nav className="side-nav">
@@ -100,7 +100,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <div className="page-content"><Localize>{children}</Localize></div>
-      <footer className="app-footer"><span>© ۱۴۰۵ {isFa ? "اعتباریار؛ تمام حقوق محفوظ است." : "CreditYar. All rights reserved."}</span><span><Sparkles size={13}/> {isFa ? "ساخته‌شده برای مدیریت هوشمند کسب‌وکار" : "Designed for smarter operations"}</span></footer>
+      <footer className="app-footer"><span>© ۱۴۰۵ {isFa ? "موبایلر؛ تمام حقوق محفوظ است." : "Mobiler. All rights reserved."}</span><span><Sparkles size={13}/> {isFa ? "ساخته‌شده برای مدیریت هوشمند کسب‌وکار" : "Designed for smarter operations"}</span></footer>
     </main>
   </div>;
 }
