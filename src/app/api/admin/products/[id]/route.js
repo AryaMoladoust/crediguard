@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/db';
 import Product from '@/models/Product';
 import { isAdmin, unauthorized, bad } from '@/lib/admin-guard';
 import { CATEGORY_SLUGS, toInt, shape, cleanImage, cleanHex } from '@/lib/catalog';
+import { deleteUploadedImage } from '@/lib/images';
 export const dynamic = 'force-dynamic';
 
 export async function GET(_req, { params }) {
@@ -51,8 +52,11 @@ export async function PATCH(req, { params }) {
   try {
     await connectDB();
     const filter = $inc.stock < 0 ? { _id: id, stock: { $gte: -$inc.stock } } : { _id: id };
+    const before = $set.image !== undefined ? await Product.findById(id).select('image').lean() : null;
     const doc = await Product.findOneAndUpdate(filter, update, { new: true, runValidators: true }).lean();
     if (!doc) return bad('محصول پیدا نشد یا موجودی کافی نیست', 404);
+    // اگر تصویر آپلودیِ قبلی جایگزین شد، از دیتابیس پاک شود
+    if (before?.image && before.image !== doc.image) await deleteUploadedImage(before.image);
     return Response.json(shape(doc));
   } catch (e) {
     console.error('admin product PATCH:', e);
@@ -68,6 +72,7 @@ export async function DELETE(_req, { params }) {
     await connectDB();
     const doc = await Product.findByIdAndDelete(id).lean();
     if (!doc) return bad('محصول پیدا نشد', 404);
+    await deleteUploadedImage(doc.image);
     return Response.json({ ok: true });
   } catch (e) {
     console.error('admin product DELETE:', e);

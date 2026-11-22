@@ -1,7 +1,7 @@
 "use client";
-import { FormEvent, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, PackagePlus, Palette, RotateCcw, Save } from "lucide-react";
+import { ArrowRight, Check, ImagePlus, PackagePlus, Palette, RotateCcw, Save, Trash2 } from "lucide-react";
 import { Button, PageHeader, Panel } from "@/admin/components/ui";
 
 export type ProductData = { id: string; sku: string; name: string; category: string; brand: string; price: number; oldPrice: number; stock: number; minStock: number; colors: string[]; colorHex: string; isOffer: boolean; image: string; description: string };
@@ -11,6 +11,23 @@ const toLatin = (s: string) => s.replace(/[۰-۹]/g, d => String("۰۱۲۳۴۵۶
 const num = (s: string) => (s.trim() === "" ? NaN : Number(toLatin(s).replace(/[,٬\s]/g, "")));
 const hexToRgb = (hex: string) => { const h = hex.replace("#", ""); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; };
 const rgbToHex = (r: number, g: number, b: number) => "#" + [r, g, b].map(v => Math.max(0, Math.min(255, v)).toString(16).padStart(2, "0")).join("").toUpperCase();
+
+const MAX_UPLOAD = 3 * 1024 * 1024;
+// کوچک‌کردن تصویر در مرورگر (حداکثر ۱۴۰۰ پیکسل، WebP) تا آپلود سریع باشد و فروشگاه سبک بماند
+async function shrinkImage(file: File): Promise<Blob> {
+  if (file.type === "image/gif") return file; // انیمیشن حفظ شود
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, 1400 / Math.max(bmp.width, bmp.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bmp.width * scale); canvas.height = Math.round(bmp.height * scale);
+    canvas.getContext("2d")!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    bmp.close?.();
+    const blob: Blob | null = await new Promise(r => canvas.toBlob(r, "image/webp", 0.86));
+    if (blob && blob.size < file.size) return blob;
+  } catch { /* اگر مرورگر نتوانست، فایل اصلی ارسال می‌شود */ }
+  return file;
+}
 
 export function ProductForm({ product }: { product?: ProductData }) {
   const router = useRouter();
@@ -31,12 +48,34 @@ export function ProductForm({ product }: { product?: ProductData }) {
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const rgb = useMemo(() => hexToRgb(color), [color]);
   const setRgb = (i: number, v: number) => { const n = [...rgb]; n[i] = v; setColor(rgbToHex(n[0], n[1], n[2])); };
   const catName = CATS.find(c => c[0] === category)?.[1] ?? "";
 
+  async function onPickFile(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    if (!/^image\/(jpeg|png|webp|gif)$/.test(f.type)) return setError("فقط تصویر JPG، PNG، WebP یا GIF مجاز است.");
+    setUploading(true); setError("");
+    try {
+      const blob = await shrinkImage(f);
+      if (blob.size > MAX_UPLOAD) { setError("حجم تصویر بعد از بهینه‌سازی هنوز بیشتر از ۳ مگابایت است؛ تصویر کوچک‌تری انتخاب کنید."); return; }
+      const fd = new FormData();
+      fd.append("file", blob, f.name);
+      const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+      if (res.status === 401) { window.location.href = "/admin/login"; return; }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(data.error || "آپلود تصویر ناموفق بود."); return; }
+      setImage(data.url);
+    } catch { setError("ارتباط با سرور برقرار نشد."); }
+    finally { setUploading(false); }
+  }
+
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (uploading) return setError("صبر کنید تا آپلود تصویر تمام شود.");
     const p = num(price), op = oldPrice.trim() ? num(oldPrice) : 0, st = num(stock), ms = num(minStock);
     if (!name.trim()) return setError("نام محصول الزامی است.");
     if (!edit && !sku.trim()) return setError("کد کالا الزامی است.");
@@ -72,7 +111,19 @@ export function ProductForm({ product }: { product?: ProductData }) {
             <label className="form-field"><span>قیمت قبل از تخفیف (اختیاری)</span><input inputMode="numeric" value={oldPrice} onChange={e => setOldPrice(e.target.value)} placeholder="برای نمایش درصد تخفیف"/></label>
             <label className="form-field"><span>موجودی</span><input inputMode="numeric" value={stock} onChange={e => setStock(e.target.value)}/></label>
             <label className="form-field"><span>نقطه سفارش مجدد</span><input inputMode="numeric" value={minStock} onChange={e => setMinStock(e.target.value)}/><small>با رسیدن موجودی به این عدد، هشدار کمبود نمایش داده می‌شود.</small></label>
-            <label className="form-field"><span>آدرس تصویر</span><input dir="ltr" value={image} onChange={e => setImage(e.target.value)} placeholder="/img/products/a55.jpg  یا  https://..."/><small>خالی = تصویر پیش‌فرض دسته. فایل را در public/img/products بگذارید.</small></label>
+            <div className="form-field span-2"><span>تصویر محصول</span>
+              <div className="image-upload-row">
+                <div className="image-upload-thumb">{image ? <img src={image} alt=""/> : <ImagePlus size={22}/>}</div>
+                <div className="image-upload-actions">
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <label className="btn btn-secondary" style={uploading ? { opacity: .6, pointerEvents: "none" } : undefined}><span className="btn-icon"><ImagePlus size={15}/></span><span>{uploading ? "در حال آپلود..." : image ? "تغییر تصویر" : "انتخاب تصویر از سیستم"}</span><input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={onPickFile} disabled={uploading} hidden/></label>
+                    {image && <button type="button" className="btn btn-ghost" onClick={() => setImage("")}><span className="btn-icon"><Trash2 size={14}/></span><span>حذف تصویر</span></button>}
+                  </div>
+                  <small>JPG، PNG، WebP یا GIF؛ تصویر قبل از ارسال به‌صورت خودکار بهینه می‌شود. خالی = تصویر پیش‌فرض دسته.</small>
+                </div>
+              </div>
+              <input dir="ltr" value={image} onChange={e => setImage(e.target.value)} placeholder="یا آدرس تصویر: /img/products/a55.jpg  یا  https://..."/>
+            </div>
             <label className="form-field" style={{ justifyContent: "flex-end" }}><span>پیشنهاد ویژه</span><span style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="checkbox" checked={isOffer} onChange={e => setIsOffer(e.target.checked)}/> نمایش به‌عنوان پیشنهاد ویژه</span></label>
             <label className="form-field span-2"><span>توضیحات محصول</span><textarea rows={4} value={description} onChange={e => setDescription(e.target.value)} maxLength={2000} placeholder="توضیحات و ویژگی‌های کلیدی..."/></label>
           </div>
@@ -96,7 +147,7 @@ export function ProductForm({ product }: { product?: ProductData }) {
             <div className="product-preview-info"><span className="preview-category">{catName}</span><h3>{name || "نام محصول"}</h3><p>{brand || "نام برند"}</p><strong>{Number.isFinite(num(price)) ? num(price).toLocaleString("fa-IR") : "۰"} تومان</strong>{colorName && <div className="preview-color-line"><i style={{ background: color }}/>{colorName}</div>}</div>
           </div>
         </Panel>
-        <Button type="submit" icon={<Save size={16}/>} className="full-submit" disabled={busy}>{edit ? "ذخیره تغییرات" : "ثبت محصول در دیتابیس"}</Button>
+        <Button type="submit" icon={<Save size={16}/>} className="full-submit" disabled={busy || uploading}>{edit ? "ذخیره تغییرات" : "ثبت محصول در دیتابیس"}</Button>
         <Button type="button" variant="secondary" className="full-submit" onClick={() => router.push("/admin/inventory")}>انصراف</Button>
       </aside>
     </form>
