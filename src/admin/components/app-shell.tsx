@@ -21,8 +21,6 @@ const routes = [
   { key: "sales", href: "/admin/sales", icon: "sales" },
   { key: "customers", href: "/admin/customers", icon: "customers", children: [
     { labelFa: "همه مشتریان", labelEn: "All customers", href: "/admin/customers" },
-    { labelFa: "معوق‌شده", labelEn: "Overdue", href: "/admin/customers/overdue" },
-    { labelFa: "مسدودشده", labelEn: "Blocked", href: "/admin/customers/blocked" },
     { labelFa: "مشتریان جدید", labelEn: "New customers", href: "/admin/customers/new" },
   ] },
   { key: "installments", href: "/admin/installments", icon: "installments" },
@@ -38,12 +36,10 @@ const routes = [
 ];
 const searchable = [
   { title: "داشبورد", en: "Dashboard", href: "/admin", desc: "نمای کلی سامانه" },
-  { title: "مشتریان خرید اقساطی", en: "Installment customers", href: "/admin/customers", desc: "پروفایل و وضعیت مشتریان" },
-  { title: "مشتریان معوق", en: "Overdue customers", href: "/admin/customers/overdue", desc: "پیگیری بدهی‌های سررسیدشده" },
-  { title: "مشتریان مسدود", en: "Blocked customers", href: "/admin/customers/blocked", desc: "فهرست حساب‌های مسدود" },
+  { title: "مشتریان", en: "Customers", href: "/admin/customers", desc: "خریداران فروشگاه" },
   { title: "افزودن محصول", en: "Add product", href: "/admin/inventory/new", desc: "ثبت کالای تازه در انبار" },
-  { title: "خروجی و حسابرسی مالی", en: "Financial audit", href: "/admin/finance", desc: "تراکنش‌ها و گزارش‌ها" },
-  { title: "فعالیت‌ها و وظایف", en: "Activity and tasks", href: "/admin/activity", desc: "گزارش رویدادها و پیگیری کارها" },
+  { title: "مدیریت مالی", en: "Finance", href: "/admin/finance", desc: "گردش سفارش‌ها و خروجی اکسل" },
+  { title: "فعالیت‌ها", en: "Activity", href: "/admin/activity", desc: "آخرین تغییرات سفارش‌ها" },
   { title: "اشتراک و طرح‌ها", en: "Plans and billing", href: "/admin/subscription", desc: "مدیریت پلن سامانه" },
 ];
 
@@ -69,7 +65,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     {mobileOpen && <button className="mobile-scrim" onClick={() => setMobileOpen(false)} aria-label="بستن منو"/>}
     <aside className="sidebar">
       <div className="brand-row"><div className="brand-symbol"><ShieldCheck size={21}/></div><div className="brand-copy"><strong>{t("brand")}</strong><span>{isFa ? "مدیریت هوشمند فروشگاه" : "Smart store management"}</span></div><button className="mobile-close icon-button" onClick={() => setMobileOpen(false)}><X size={18}/></button></div>
-      <div className="workspace-switch"><span className="workspace-logo">A</span><div><b>{isFa ? "موبایلر" : "Mobiler"}</b><small>{isFa ? "فضای کاری اصلی" : "Main workspace"}</small></div><ChevronDown size={15}/></div>
+      <div className="workspace-switch"><span className="workspace-logo">M</span><div><b>{isFa ? "موبایلر" : "Mobiler"}</b><small>{isFa ? "فضای کاری اصلی" : "Main workspace"}</small></div><ChevronDown size={15}/></div>
       <div className="nav-caption">{isFa ? "فضای کاری" : "WORKSPACE"}</div>
       <nav className="side-nav">
         {routes.map(item => {
@@ -107,7 +103,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 function getCurrentTitle(path: string, isFa: boolean) {
   path = path.replace(/^\/admin/, "") || "/";
   const map: [string, string, string][] = [
-    ["/", "داشبورد", "Dashboard"], ["/sales", "فروش", "Sales"], ["/customers", "مشتریان خرید اقساطی", "Installment customers"],
+    ["/", "داشبورد", "Dashboard"], ["/sales", "فروش", "Sales"], ["/customers", "مشتریان", "Customers"],
     ["/installments", "مدیریت اقساط", "Installments"], ["/risk", "اعتبار و ریسک", "Credit & Risk"], ["/inventory", "مدیریت انبار", "Inventory"],
     ["/users", "مدیریت کاربران", "Users"], ["/activity", "فعالیت‌ها و وظایف", "Activity & Tasks"], ["/finance", "مدیریت مالی", "Finance"],
     ["/integrations", "اتصال و API", "Integrations"], ["/notifications", "اعلان‌ها", "Notifications"], ["/subscription", "اشتراک و طرح‌ها", "Plans & Billing"], ["/settings", "تنظیمات", "Settings"],

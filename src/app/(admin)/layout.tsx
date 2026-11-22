@@ -5,7 +5,7 @@ import { AppProviders } from "@/admin/components/providers";
 
 export const metadata: Metadata = {
   title: "پنل مدیریت | موبایلر",
-  description: "پنل مدیریت فروشگاه موبایلر (اعتباریار)",
+  description: "پنل مدیریت فروشگاه موبایلر",
   robots: { index: false, follow: false },
 };
 

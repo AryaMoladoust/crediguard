@@ -2,15 +2,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Search, ShoppingBag, Heart, Menu, X, UserRound, ArrowLeft, ArrowUpLeft, Headphones, ShieldCheck, Truck, RotateCcw, Smartphone, Laptop, Watch, Gamepad2, Camera, Zap, Star, Plus, Minus, Trash2, CheckCircle2, Sparkles, ChevronLeft, MapPin, Phone, Mail, Instagram, Clock3 } from 'lucide-react';
+import { Search, ShoppingBag, Heart, Menu, X, UserRound, ArrowLeft, ArrowUpLeft, Headphones, ShieldCheck, Truck, RotateCcw, Smartphone, Laptop, Watch, Zap, Plus, Minus, Trash2, CheckCircle2, Sparkles, MapPin, Phone, Mail, Instagram, Clock3 } from 'lucide-react';
 import { toman, CATEGORIES } from '@/lib/format';
 
 const CATEGORY_META = [
   { slug: 'mobile', name: 'گوشی هوشمند', sub: 'جدیدترین پرچم‌دارها', icon: Smartphone, tone: 'peach' },
   { slug: 'laptop', name: 'لپ‌تاپ و تبلت', sub: 'برای کار و خلاقیت', icon: Laptop, tone: 'blue' },
   { slug: 'headphone', name: 'صوتی و هدفون', sub: 'صدایی فراتر از انتظار', icon: Headphones, tone: 'lavender' },
-  { slug: 'powerbank', name: 'گجت و ساعت', sub: 'همراه هوشمند تو', icon: Watch, tone: 'mint' },
-  { slug: 'accessory', name: 'لوازم جانبی', sub: 'جزئیات کاربردی', icon: Zap, tone: 'sand' },
+  { slug: 'powerbank', name: 'پاور بانک', sub: 'انرژی همراه تو', icon: Zap, tone: 'mint' },
+  { slug: 'accessory', name: 'لوازم جانبی', sub: 'جزئیات کاربردی', icon: Watch, tone: 'sand' },
 ];
 const money = (v) => `${toman(v)} تومان`;
 
@@ -32,7 +32,6 @@ function ProductTile({ product, index, onAdd, onOpen }) {
     <div className="product-info">
       <div className="product-brand">{product.brand || 'موبایلر'} <span>•</span> {product.category === 'mobile' ? 'موبایل' : product.category === 'laptop' ? 'کامپیوتر' : product.category === 'headphone' ? 'صوتی' : product.category === 'powerbank' ? 'گجت' : 'جانبی'}</div>
       <button className="product-name" onClick={() => onOpen(product)}>{product.name}</button>
-      <div className="rating-line"><span className="stars">★★★★★</span><span>۴٫۸</span><span className="rating-count">(۲۴ نظر)</span></div>
       <div className="product-bottom"><div><div className="stock-line">{product.stock > 0 ? <><i/> موجود در انبار · {Number(product.stock).toLocaleString('fa-IR')} عدد</> : <span className="out-stock">ناموجود</span>}</div><div className="price-line">{money(product.price)}</div></div><button className="add-button" disabled={product.stock <= 0} onClick={() => onAdd(product)} aria-label="افزودن به سبد"><Plus size={19}/></button></div>
     </div>
   </article>;
@@ -72,7 +71,6 @@ export default function Storefront({ initialProducts = [], databaseError = false
   const remove = (id) => setCart(old=>old.filter(x=>x._id!==id));
   async function submitOrder(e) {
     e.preventDefault();
-    if (cart.some(item => String(item._id).startsWith('demo-'))) { setNotice('ثبت سفارش واقعی پس از اتصال MongoDB فعال می‌شود.'); setTimeout(()=>setNotice(''),4500); return; }
     setBusy(true);
     try {
       const response = await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer,method,items:cart.map(x=>({productId:x._id,qty:x.qty}))})});
@@ -93,8 +91,8 @@ export default function Storefront({ initialProducts = [], databaseError = false
     </header>
 
     <main id="top">
-      {databaseError && <div className="db-warning">کاتالوگ نمایشی موبایلر فعال است؛ ۱۰۰ کالا با اطلاعات اولیه نمایش داده شده‌اند. تصاویر و مشخصات را می‌توانی بعداً تکمیل کنی. برای ثبت سفارش واقعی و ذخیره دائمی اطلاعات، اتصال دیتابیس لازم است.</div>}
-      <section className="hero-wrap"><div className="hero-copy"><span className="eyebrow"><i/> انتخاب هوشمند، خرید مطمئن</span><h1>تکنولوژی،<br/><em>یک قدم نزدیک‌تر</em><br/>به زندگی تو.</h1><p>از جدیدترین گوشی‌ها تا ابزارهای هوشمند؛ انتخاب کن، مقایسه کن و با خیال راحت خرید کن.</p><div className="hero-buttons"><a href="#products" className="primary-cta">شروع خرید <ArrowLeft size={17}/></a><a href="#categories" className="text-cta">دسته‌بندی محصولات <ArrowUpLeft size={17}/></a></div><div className="hero-proof"><div className="proof-avatars"><span>م</span><span>س</span><span>ع</span><b>+</b></div><div><strong>بیش از ۲,۴۰۰ خرید موفق</strong><small>همراه انتخاب‌های هوشمند شما</small></div><div className="proof-divider"/><div className="hero-rating"><span>★★★★★</span><b>۴.۹ از ۵</b></div></div></div>
+      {databaseError && <div className="db-warning">اتصال به دیتابیس برقرار نشد؛ لطفاً کمی بعد دوباره تلاش کنید.</div>}
+      <section className="hero-wrap"><div className="hero-copy"><span className="eyebrow"><i/> انتخاب هوشمند، خرید مطمئن</span><h1>تکنولوژی،<br/><em>یک قدم نزدیک‌تر</em><br/>به زندگی تو.</h1><p>از جدیدترین گوشی‌ها تا ابزارهای هوشمند؛ انتخاب کن، مقایسه کن و با خیال راحت خرید کن.</p><div className="hero-buttons"><a href="#products" className="primary-cta">شروع خرید <ArrowLeft size={17}/></a><a href="#categories" className="text-cta">دسته‌بندی محصولات <ArrowUpLeft size={17}/></a></div></div>
         <div className="hero-art"><div className="hero-orange-orb"/><div className="hero-blue-orb"/><div className="hero-grid"/><div className="hero-product hero-phone"><div className="phone-camera"><i/><i/><i/></div><div className="phone-screen"><span>01:28</span><b>∞</b></div></div><div className="hero-product hero-headphone"><div className="headband"/><div className="earcup left"/><div className="earcup right"/></div><div className="hero-float-card"><span className="float-icon"><Zap size={17}/></span><div><b>پیشنهاد امروز</b><small>تا ۳۰٪ تخفیف ویژه</small></div><strong>٪۳۰-</strong></div><div className="hero-side-note">FEEL THE<br/><b>FUTURE</b><span>—</span></div><div className="hero-caption">MOBILER / TECH STORE</div></div>
       </section>
 
@@ -105,7 +103,7 @@ export default function Storefront({ initialProducts = [], databaseError = false
       <section id="offers" className="campaign-banner"><div className="campaign-content"><span className="campaign-tag"><Sparkles size={13}/> پیشنهاد محدود</span><h2>هوشمندانه‌تر بخر،<br/><em>بیشتر لذت ببر.</em></h2><p>منتخب محصولات دیجیتال با قیمت‌های استثنایی؛ فرصت رو از دست نده.</p><a href="#products" className="campaign-button">دیدن پیشنهادها <ArrowLeft size={16}/></a></div><div className="campaign-art"><div className="campaign-disc disc-one"/><div className="campaign-disc disc-two"/><div className="campaign-device"><div/></div><div className="campaign-label">TECH<br/>DAYS</div><span className="campaign-percent">UP TO <b>30%</b></span></div></section>
 
       <section id="products" className="section-block products-section"><div className="section-heading"><div><span className="section-kicker">منتخب تیم موبایلر</span><h2>{query?`نتایج جستجو برای «${query}»`:'محصولاتی که دوست‌شان داری'}</h2><p>انتخاب‌هایی جذاب از بین جدیدترین و محبوب‌ترین کالاها.</p></div><div className="product-controls"><label>مرتب‌سازی <select value={sort} onChange={e=>setSort(e.target.value)}><option value="popular">محبوب‌ترین</option><option value="cheap">ارزان‌ترین</option><option value="expensive">گران‌ترین</option></select></label></div></div><div className="filter-chips"><button className={activeCategory==='all'?'selected':''} onClick={()=>setActiveCategory('all')}>همه کالاها</button>{CATEGORIES.map(c=><button key={c.slug} className={activeCategory===c.slug?'selected':''} onClick={()=>setActiveCategory(c.slug)}>{c.name}</button>)}</div>
-        {filtered.length?<div className="product-grid">{filtered.map((p,i)=><ProductTile key={p._id} product={p} index={i} onAdd={add} onOpen={setProductOpen}/>)}</div>:<div className="empty-results"><Search size={28}/><b>محصولی پیدا نکردیم</b><span>عبارت جستجو یا دسته‌بندی را تغییر بده.</span><button onClick={()=>{setQuery('');setActiveCategory('all')}}>نمایش همه محصولات</button></div>}
+        {filtered.length?<div className="product-grid">{filtered.map((p,i)=><ProductTile key={p._id} product={p} index={i} onAdd={add} onOpen={setProductOpen}/>)}</div>:<div className="empty-results"><Search size={28}/><b>{products.length ? 'محصولی پیدا نکردیم' : 'هنوز محصولی ثبت نشده است'}</b><span>{products.length ? 'عبارت جستجو یا دسته‌بندی را تغییر بده.' : 'به‌زودی کالاهای جدید اضافه می‌شوند.'}</span><button onClick={()=>{setQuery('');setActiveCategory('all')}}>نمایش همه محصولات</button></div>}
         <div className="catalog-foot"><span>نمایش {filtered.length.toLocaleString('fa-IR')} محصول از {products.length.toLocaleString('fa-IR')} کالا</span><span>موجودی و قیمت‌ها از فروشگاه به‌روزرسانی می‌شوند</span></div>
       </section>
 
@@ -113,7 +111,7 @@ export default function Storefront({ initialProducts = [], databaseError = false
 
       <section className="service-band"><div className="service-title"><span className="section-kicker">چرا موبایلر؟</span><h2>خرید خوب، فقط<br/><em>شروع ماجراست.</em></h2></div><div className="service-points"><div><ShieldCheck/><b>اصالت تضمین‌شده</b><small>کالای اصل با ضمانت معتبر</small></div><div><Truck/><b>ارسال قابل پیگیری</b><small>از انبار تا درِ خانه شما</small></div><div><Headphones/><b>مشاوره تخصصی</b><small>کمک می‌کنیم درست انتخاب کنی</small></div></div></section>
 
-      <section id="about" className="about-section"><div><span className="section-kicker">داستان موبایلر</span><h2>تکنولوژی باید<br/><em>برای همه ساده باشد.</em></h2></div><p>موبایلر یک فروشگاه تخصصی کالای دیجیتال است؛ جایی برای کشف، مقایسه و تهیه محصولات مورد نیاز زندگی امروز. ما تلاش می‌کنیم تجربه خرید آنلاین را شفاف، سریع و قابل اعتماد کنیم.</p><div className="about-stats"><div><b>۱۰۰+</b><small>محصول متنوع</small></div><div><b>۷ روز</b><small>ضمانت بازگشت</small></div><div><b>۲۴/۷</b><small>ثبت سفارش آنلاین</small></div></div></section>
+      <section id="about" className="about-section"><div><span className="section-kicker">داستان موبایلر</span><h2>تکنولوژی باید<br/><em>برای همه ساده باشد.</em></h2></div><p>موبایلر یک فروشگاه تخصصی کالای دیجیتال است؛ جایی برای کشف، مقایسه و تهیه محصولات مورد نیاز زندگی امروز. ما تلاش می‌کنیم تجربه خرید آنلاین را شفاف، سریع و قابل اعتماد کنیم.</p><div className="about-stats"><div><b>{products.length.toLocaleString('fa-IR')}</b><small>محصول موجود در کاتالوگ</small></div><div><b>۷ روز</b><small>ضمانت بازگشت</small></div><div><b>۲۴/۷</b><small>ثبت سفارش آنلاین</small></div></div></section>
 
       <section id="support" className="support-section"><div className="support-copy"><span className="section-kicker">همیشه در دسترس</span><h2>سوالی داری؟<br/><em>ما اینجاییم.</em></h2><p>برای انتخاب محصول، پیگیری سفارش یا هر موضوع دیگه‌ای با تیم پشتیبانی موبایلر در ارتباط باش.</p><a href="tel:02188442000" className="support-call"><Phone size={17}/> ۰۲۱-۸۸۴۴۲۰۰۰</a></div><div className="support-details"><div><span><Clock3/></span><p><b>ساعات پاسخ‌گویی</b><small>شنبه تا پنجشنبه، ۹ تا ۱۸</small></p></div><div><span><MapPin/></span><p><b>نشانی فروشگاه</b><small>تهران، خیابان ولیعصر، پلاک ۲۴۸، واحد ۳</small></p></div><div><span><Mail/></span><p><b>ایمیل پشتیبانی</b><small>support@mobiler.example</small></p></div></div></section>
     </main>

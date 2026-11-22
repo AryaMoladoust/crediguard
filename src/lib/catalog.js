@@ -27,5 +27,17 @@ export const shape = (p) => ({
   colorHex: p.colorHex || '',
   isOffer: !!p.isOffer,
   sold: p.sold ?? 0,
-  image: p.image || ''
+  image: p.image || '',
+  oldPrice: p.oldPrice || 0,
+  description: p.description || ''
 });
+
+// آدرس تصویر: مسیر داخل پروژه (/img/...) یا آدرس https؛ خالی = تصویر پیش‌فرض دسته
+export function cleanImage(v) {
+  const s = String(v ?? '').trim();
+  if (!s) return '';
+  if (s.length > 500) return null;
+  if (/^\/(?!\/)[^\s]*$/.test(s) || /^https:\/\/[^\s]+$/.test(s)) return s;
+  return null;
+}
+export const cleanHex = (v) => { const s = String(v ?? '').trim(); return !s ? '' : /^#[0-9a-fA-F]{6}$/.test(s) ? s : null; };

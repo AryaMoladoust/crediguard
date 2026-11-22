@@ -1,12 +1,25 @@
 "use client";
-import { useState } from "react";
-import { AlertTriangle, Bell, Check, CheckCheck, CreditCard, Package, ShieldAlert, UserRound } from "lucide-react";
-import { Avatar, Badge, Button, PageHeader, Panel, StatCard } from "@/admin/components/ui";
-const initial=[
-{id:1,title:"قسط مشتری معوق شد",desc:"قسط سوم مهدی کریمی به مدت ۴ روز پرداخت نشده است.",time:"۱۲ دقیقه پیش",type:"finance",read:false},
-{id:2,title:"هشدار رفتار مشکوک",desc:"تغییر غیرمعمول مشخصات سفارش برای پرونده CUS-1027 شناسایی شد.",time:"۳۵ دقیقه پیش",type:"risk",read:false},
-{id:3,title:"موجودی کالا رو به اتمام است",desc:"موجودی موس Logitech MX Master به ۶ عدد رسیده است.",time:"۱ ساعت پیش",type:"inventory",read:false},
-{id:4,title:"مشتری جدید ثبت شد",desc:"نازنین حسینی درخواست خرید اقساطی ثبت کرده است.",time:"۲ ساعت پیش",type:"customer",read:true},
-{id:5,title:"پرداخت با موفقیت ثبت شد",desc:"مبلغ ۲۱ میلیون تومان از سارا احمدی دریافت شد.",time:"دیروز",type:"finance",read:true},
-];
-export default function NotificationsPage(){const [items,setItems]=useState(initial);const unread=items.filter(i=>!i.read).length;function readAll(){setItems(v=>v.map(i=>({...i,read:true})));}const icon=(type:string)=>type==="finance"?<CreditCard size={17}/>:type==="risk"?<ShieldAlert size={17}/>:type==="inventory"?<Package size={17}/>:<UserRound size={17}/>;return <><PageHeader title="مرکز اعلان‌ها" subtitle="هشدارهای مالی، رفتارهای مشکوک، وضعیت موجودی و درخواست‌های تازه." eyebrow="NOTIFICATION CENTER" action={<Button variant="secondary" icon={<CheckCheck size={16}/>} onClick={readAll}>علامت‌گذاری همه به‌عنوان خوانده‌شده</Button>}/><div className="stats-grid stats-three"><StatCard label="اعلان‌های جدید" value={unread.toLocaleString("fa-IR")} hint="خوانده‌نشده" icon={<Bell size={18}/>} tone="blue"/><StatCard label="هشدارهای مهم" value="۲" hint="مالی و امنیتی" icon={<AlertTriangle size={18}/>} tone="red"/><StatCard label="کل اعلان‌ها" value={items.length.toLocaleString("fa-IR")} hint="در این نما" icon={<Check size={18}/>} tone="green"/></div><Panel title="اعلان‌های اخیر" subtitle="برای مشاهده جزئیات، هر اعلان را انتخاب کنید."><div className="notification-list">{items.map(item=><div key={item.id} className={`notification-item ${item.read?"read":"unread"}`}><span className={`notification-type ${item.type}`}>{icon(item.type)}</span><div className="notification-copy"><div><b>{item.title}</b>{!item.read&&<i className="unread-dot"/>}</div><p>{item.desc}</p><small>{item.time}</small></div><div className="notification-actions">{!item.read&&<Badge tone="info">جدید</Badge>}<button className="btn btn-ghost btn-small" onClick={()=>setItems(v=>v.map(x=>x.id===item.id?{...x,read:!x.read}:x))}>{item.read?"خوانده‌نشده":"خواندم"}</button></div></div>)}</div></Panel></>}
+import Link from "next/link";
+import { AlertTriangle, Box, Clock3 } from "lucide-react";
+import { EmptyState, PageHeader, Panel } from "@/admin/components/ui";
+import { ago, fa, useApi } from "@/admin/lib/api";
+
+type Events = { orders: { id: string; code: string; customer: string; total: number; status: string; updatedAt: string }[]; stock: { id: string; name: string; sku: string; stock: number; minStock: number }[] };
+export default function NotificationsPage() {
+  const { data, error, loading } = useApi<Events>("/api/admin/events", 20000);
+  const pending = (data?.orders ?? []).filter(o => o.status === "pending");
+  const stock = data?.stock ?? [];
+  const empty = !loading && !pending.length && !stock.length;
+  return <>
+    <PageHeader title="اعلان‌ها" subtitle="موارد نیازمند اقدام: سفارش‌های در انتظار و کالاهای کم‌موجود یا ناموجود." eyebrow="NOTIFICATIONS"/>
+    {error && <div className="form-error">{error}</div>}
+    {empty ? <Panel title="اعلان‌ها" subtitle=""><EmptyState title="موردی نیازمند اقدام نیست"/></Panel> : <>
+      <Panel title="سفارش‌های در انتظار" subtitle={`${fa(pending.length)} سفارش`}>
+        <div className="timeline-list">{pending.map(o => <div className="timeline-item" key={o.id}><span className="timeline-icon info"><Clock3 size={15}/></span><div><b>سفارش {o.code} منتظر تأیید است</b><small>{o.customer} · {fa(o.total)} تومان · <Link href="/admin/sales">رفتن به فروش</Link></small></div><time>{ago(o.updatedAt)}</time></div>)}{!pending.length && <p className="muted-cell">سفارش در انتظاری نیست.</p>}</div>
+      </Panel>
+      <Panel title="هشدار موجودی" subtitle={`${fa(stock.length)} کالا`}>
+        <div className="timeline-list">{stock.map(p => <div className="timeline-item" key={p.id}><span className={`timeline-icon ${p.stock <= 0 ? "warning" : "info"}`}>{p.stock <= 0 ? <AlertTriangle size={15}/> : <Box size={15}/>}</span><div><b>{p.name}</b><small>{p.stock <= 0 ? "ناموجود" : `${fa(p.stock)} عدد مانده (نقطه سفارش ${fa(p.minStock)})`} · <Link href={`/admin/inventory/${p.id}`}>ویرایش</Link></small></div></div>)}{!stock.length && <p className="muted-cell">همه‌ی کالاها موجودی کافی دارند.</p>}</div>
+      </Panel>
+    </>}
+  </>;
+}

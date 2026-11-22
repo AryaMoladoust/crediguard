@@ -1,13 +1,29 @@
 "use client";
 import { useMemo, useState } from "react";
-import { CalendarClock, CheckCircle2, Clock3, CreditCard, Download, Search } from "lucide-react";
-import { Badge, Button, PageHeader, Panel, SearchInput, Segmented, SelectField, StatCard, Table } from "@/admin/components/ui";
-const installments=[
-{id:"INS-2048",name:"سارا احمدی",order:"ORD-3401",amount:"۲۱ میلیون",due:"۱۵ آبان ۱۴۰۵",state:"معوق",delay:"۴ روز"},
-{id:"INS-2045",name:"مهدی کریمی",order:"ORD-3398",amount:"۷ میلیون",due:"۱۸ آبان ۱۴۰۵",state:"در انتظار",delay:"—"},
-{id:"INS-2041",name:"رضا نوری",order:"ORD-3393",amount:"۴٫۷ میلیون",due:"۲۰ آبان ۱۴۰۵",state:"در انتظار",delay:"—"},
-{id:"INS-2036",name:"علی رضایی",order:"ORD-3380",amount:"۱٫۳ میلیون",due:"۱۰ آبان ۱۴۰۵",state:"پرداخت‌شده",delay:"۰ روز"},
-{id:"INS-2029",name:"الهام عباسی",order:"ORD-3374",amount:"۹ میلیون",due:"۰۸ آبان ۱۴۰۵",state:"معوق",delay:"۱۱ روز"},
-{id:"INS-2021",name:"نگار محمدی",order:"ORD-3387",amount:"۱۰ میلیون",due:"۲۲ آبان ۱۴۰۵",state:"در انتظار",delay:"—"},
-];
-export default function InstallmentsPage(){const [tab,setTab]=useState("all");const [q,setQ]=useState("");const [type,setType]=useState("all");const filtered=useMemo(()=>installments.filter(x=>(tab==="all"||x.state===tab)&&(!q||`${x.id} ${x.name} ${x.order}`.includes(q))&&(type==="all"||(type==="late"?x.state==="معوق":x.state!=="معوق"))),[tab,q,type]);return <><PageHeader title="مدیریت اقساط" subtitle="کنترل سررسیدها، وصول مطالبات و پیگیری اقساط مشتریان." eyebrow="CREDIT / INSTALLMENTS" action={<Button variant="secondary" icon={<Download size={16}/>} onClick={()=>window.print()}>گزارش اقساط</Button>}/><div className="stats-grid stats-four"><StatCard label="کل اقساط فعال" value="۳۱۰" hint="در تمام پرونده‌ها" icon={<CreditCard size={18}/>} tone="blue"/><StatCard label="پرداخت‌شده این ماه" value="۱۲۴" hint="۹٪ رشد نسبت به ماه قبل" icon={<CheckCircle2 size={18}/>} tone="green"/><StatCard label="در انتظار پرداخت" value="۱۷۴" hint="سررسیدهای آینده" icon={<Clock3 size={18}/>} tone="violet"/><StatCard label="اقساط معوق" value="۱۲" hint="نیازمند پیگیری فوری" icon={<CalendarClock size={18}/>} tone="red"/></div><Panel title="فهرست اقساط" subtitle="وضعیت اقساط را با فیلترهای زیر کنترل کنید."><div className="table-toolbar"><Segmented value={tab} onChange={setTab} options={[{label:"همه",value:"all"},{label:"در انتظار",value:"در انتظار"},{label:"معوق",value:"معوق"},{label:"پرداخت‌شده",value:"پرداخت‌شده"}]}/><SearchInput value={q} onChange={setQ} placeholder="شناسه قسط یا نام مشتری..."/><SelectField value={type} onChange={setType} options={[{label:"همه سررسیدها",value:"all"},{label:"سررسید گذشته",value:"late"},{label:"سررسید پیش‌رو",value:"future"}]}/></div><Table headers={["شناسه قسط","مشتری","شماره سفارش","مبلغ قسط","تاریخ سررسید","تأخیر","وضعیت"]} rows={filtered.map(x=>[<b className="mono link-text">{x.id}</b>,x.name,<span className="mono">{x.order}</span>,x.amount,x.due,x.delay,<Badge tone={x.state==="پرداخت‌شده"?"success":x.state==="معوق"?"danger":"warning"}>{x.state}</Badge>])}/><div className="table-footer"><span>{filtered.length} قسط نمایش داده شد.</span><span>یادآوری سررسیدها: فعال</span></div></Panel></>}
+import { CheckCircle2, Clock3, CreditCard, XCircle } from "lucide-react";
+import { Badge, EmptyState, PageHeader, Panel, SearchInput, SelectField, StatCard, Table } from "@/admin/components/ui";
+import { fa, jDate, ORDER_STATUS, Order, statusTone, useApi } from "@/admin/lib/api";
+
+export default function InstallmentsPage() {
+  const { data, error, loading } = useApi<Order[]>("/api/admin/orders", 20000);
+  const [q, setQ] = useState("");
+  const [state, setState] = useState("all");
+  const list = useMemo(() => (data ?? []).filter(o => o.method === "installment"), [data]);
+  const filtered = list.filter(o => (state === "all" || o.status === state) && (!q || `${o.code} ${o.customer} ${o.phone} ${o.product}`.toLowerCase().includes(q.toLowerCase())));
+  const live = list.filter(o => o.status !== "cancelled");
+  return <>
+    <PageHeader title="درخواست‌های اقساطی" subtitle="سفارش‌هایی که مشتری روش «خرید اقساطی» را انتخاب کرده است. برنامه‌ی اقساط و وصول هنوز به بک‌اند وصل نیست." eyebrow="CREDIT / INSTALLMENTS"/>
+    {error && <div className="form-error">{error}</div>}
+    <div className="stats-grid stats-four">
+      <StatCard label="کل درخواست‌ها" value={fa(list.length)} hint="سفارش اقساطی" icon={<CreditCard size={18}/>} tone="blue"/>
+      <StatCard label="در انتظار بررسی" value={fa(list.filter(o => o.status === "pending").length)} hint="نیازمند تصمیم" icon={<Clock3 size={18}/>} tone="amber"/>
+      <StatCard label="تأییدشده/تکمیل" value={fa(list.filter(o => o.status === "confirmed" || o.status === "completed").length)} hint="سفارش" icon={<CheckCircle2 size={18}/>} tone="green"/>
+      <StatCard label="لغوشده" value={fa(list.filter(o => o.status === "cancelled").length)} hint={`مجموع فعال: ${fa(live.reduce((s, o) => s + o.total, 0))} تومان`} icon={<XCircle size={18}/>} tone="red"/>
+    </div>
+    <Panel title="فهرست درخواست‌ها" subtitle="تغییر وضعیت از صفحه‌ی «فروش» انجام می‌شود.">
+      <div className="table-toolbar"><SearchInput value={q} onChange={setQ} placeholder="شماره سفارش، مشتری یا کالا..."/><SelectField value={state} onChange={setState} options={[{ label: "همه وضعیت‌ها", value: "all" }, ...Object.entries(ORDER_STATUS).map(([value, label]) => ({ label, value }))]}/></div>
+      {!loading && !list.length ? <EmptyState title="هنوز درخواست اقساطی ثبت نشده" desc="وقتی مشتری در فروشگاه «درخواست خرید اقساطی» را انتخاب کند، اینجا نمایش داده می‌شود."/> :
+        <Table empty={loading ? "در حال بارگذاری..." : "موردی مطابق فیلتر نیست"} headers={["سفارش", "مشتری", "کالا", "تاریخ", "مبلغ (تومان)", "وضعیت"]} rows={filtered.map(o => [<b className="mono link-text">{o.code}</b>, <div><b>{o.customer}</b><small className="muted-cell"> {o.phone}</small></div>, o.product, jDate(o.createdAt), fa(o.total), <Badge tone={statusTone(o.status)}>{ORDER_STATUS[o.status]}</Badge>])}/>}
+    </Panel>
+  </>;
+}

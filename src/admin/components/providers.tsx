@@ -14,8 +14,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    const savedLocale = localStorage.getItem("credit-yar-locale");
-    const savedTheme = localStorage.getItem("credit-yar-theme");
+    const savedLocale = localStorage.getItem("mobiler-admin-locale");
+    const savedTheme = localStorage.getItem("mobiler-admin-theme");
     if (savedLocale === "fa" || savedLocale === "en") setLocale(savedLocale);
     if (savedTheme === "light" || savedTheme === "dark") setTheme(savedTheme);
     setReady(true);
@@ -26,8 +26,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     document.documentElement.dataset.locale = locale;
     document.documentElement.dataset.theme = theme;
     if (ready) {
-      localStorage.setItem("credit-yar-locale", locale);
-      localStorage.setItem("credit-yar-theme", theme);
+      localStorage.setItem("mobiler-admin-locale", locale);
+      localStorage.setItem("mobiler-admin-theme", theme);
     }
   }, [locale, theme, ready]);
   const value = useMemo(() => ({

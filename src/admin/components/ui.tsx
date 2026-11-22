@@ -27,7 +27,7 @@ export function Localize({ children }: { children: React.ReactNode }) {
 }
 export function PageHeader({ title, subtitle, action, eyebrow }: { title: string; subtitle?: string; eyebrow?: string; action?: React.ReactNode }) {
   const { locale } = useAppSettings();
-  return <div className="page-header"><div><div className="eyebrow">{eyebrow || "CREDITYAR / WORKSPACE"}</div><h1>{localizeNode(title, locale)}</h1>{subtitle && <p>{localizeNode(subtitle, locale)}</p>}</div>{action && <div className="page-actions">{localizeNode(action, locale)}</div>}</div>;
+  return <div className="page-header"><div><div className="eyebrow">{eyebrow || "MOBILER / ADMIN"}</div><h1>{localizeNode(title, locale)}</h1>{subtitle && <p>{localizeNode(subtitle, locale)}</p>}</div>{action && <div className="page-actions">{localizeNode(action, locale)}</div>}</div>;
 }
 export function Button({ children, variant = "primary", href, onClick, icon, type = "button", disabled, className = "", block }: {
   children: React.ReactNode; variant?: "primary" | "secondary" | "ghost" | "danger"; href?: string;

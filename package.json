@@ -12,7 +12,7 @@
     "start": "next start",
     "seed": "node --env-file=.env.local scripts/seed.mjs",
     "seed:orders": "node --env-file=.env.local scripts/seed-orders.mjs",
-    "seed:refresh": "node --env-file=.env.local scripts/refresh-demo-catalog.mjs",
+    "products:clear": "node --env-file=.env.local scripts/clear-products.mjs",
     "import:bureau": "node --env-file=.env.local scripts/import-credit-bureau.mjs"
   },
   "dependencies": {

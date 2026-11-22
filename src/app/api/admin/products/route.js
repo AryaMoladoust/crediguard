@@ -1,7 +1,7 @@
 import { connectDB } from '@/lib/db';
 import Product from '@/models/Product';
 import { isAdmin, unauthorized, bad } from '@/lib/admin-guard';
-import { CATEGORY_SLUGS, toInt, shape } from '@/lib/catalog';
+import { CATEGORY_SLUGS, toInt, shape, cleanImage } from '@/lib/catalog';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
@@ -34,7 +34,11 @@ export async function POST(req) {
   if (!name || name.length > 120) return bad('نام محصول الزامی است (حداکثر ۱۲۰ کاراکتر)');
   if (!/^[A-Za-z0-9_-]{1,40}$/.test(sku)) return bad('کد کالا فقط می‌تواند شامل حروف انگلیسی، عدد، - و _ باشد');
   if (!CATEGORY_SLUGS.includes(b.category)) return bad('دسته‌بندی نامعتبر است');
-  if (price === null) return bad('قیمت نامعتبر است');
+  const oldPrice = b.oldPrice === undefined || b.oldPrice === '' || b.oldPrice === null ? 0 : toInt(b.oldPrice, 0, 10_000_000_000);
+  const image = cleanImage(b.image);
+  if (price === null || price < 1) return bad('قیمت باید عدد صحیح بزرگ‌تر از صفر باشد');
+  if (oldPrice === null) return bad('قیمت قبلی نامعتبر است');
+  if (image === null) return bad('آدرس تصویر باید با / یا https:// شروع شود');
   if (stock === null || minStock === null) return bad('موجودی یا نقطه سفارش نامعتبر است');
   if (hex && !/^#[0-9a-fA-F]{6}$/.test(hex)) return bad('کد رنگ نامعتبر است');
 
@@ -43,10 +47,10 @@ export async function POST(req) {
     const slug = sku.toLowerCase();
     if (await Product.exists({ $or: [{ sku }, { slug }] })) return bad('این کد کالا قبلاً ثبت شده است', 409);
     const doc = await Product.create({
-      name, slug, sku, brand: brand || '—', category: b.category, price, stock, minStock,
+      name, slug, sku, brand: brand || '—', category: b.category, price, oldPrice: oldPrice || undefined, isOffer: !!b.isOffer, stock, minStock,
       colors: colorName ? [colorName] : [], colorHex: hex || undefined,
       caption: description.slice(0, 100), description,
-      specs: [{ k: 'برند', v: brand || '—' }], image: `/img/${b.category}.svg`
+      specs: [{ k: 'برند', v: brand || '—' }], image: image || `/img/${b.category}.svg`
     });
     return Response.json(shape(doc.toObject()), { status: 201 });
   } catch (e) {

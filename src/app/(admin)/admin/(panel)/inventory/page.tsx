@@ -48,7 +48,10 @@ export default function InventoryPage() {
   ), [items, query, category, status]);
 
   async function save(p: Product) {
-    const res = await fetch(`/api/admin/products/${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ stock: Number(draft.stock), price: Number(draft.price) }) });
+    const price = Number(draft.price), stock = Number(draft.stock);
+    if (draft.price.trim() === "" || !Number.isInteger(price) || price < 1) { setError("قیمت باید عدد صحیح بزرگ‌تر از صفر باشد."); return; }
+    if (draft.stock.trim() === "" || !Number.isInteger(stock) || stock < 0) { setError("موجودی باید عدد صحیح ۰ یا بیشتر باشد."); return; }
+    const res = await fetch(`/api/admin/products/${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ stock, price }) });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) { setError(data.error || "ذخیره ناموفق بود"); return; }
     setItems(list => list.map(x => (x.id === p.id ? data : x)));
@@ -70,14 +73,14 @@ export default function InventoryPage() {
       <StatCard label="ناموجود" value={fa(stats.out)} hint="نیازمند تأمین" icon={<Box size={18}/>} tone="red"/>
     </div>
     {error && <div className="form-error">{error}</div>}
-    <Panel title="کاتالوگ و موجودی محصولات" subtitle="برای اصلاح موجودی یا قیمت، روی «ویرایش» بزنید.">
+    <Panel title="کاتالوگ و موجودی محصولات" subtitle="داده‌ها مستقیم از دیتابیس فروشگاه خوانده می‌شوند. برای افزودن کالا از «افزودن محصول» استفاده کنید.">
       <div className="table-toolbar">
         <SearchInput value={query} onChange={setQuery} placeholder="جست‌وجوی نام، کد کالا یا برند..."/>
         <SelectField value={category} onChange={setCategory} options={[{ label: "همه دسته‌ها", value: "all" }, ...Object.entries(CAT).map(([value, label]) => ({ label, value }))]}/>
         <SelectField value={status} onChange={setStatus} options={[{ label: "همه وضعیت‌ها", value: "all" }, { label: "موجودی کافی", value: "ok" }, { label: "کم‌موجود", value: "low" }, { label: "ناموجود", value: "out" }]}/>
       </div>
       <Table
-        empty={loading ? "در حال بارگذاری..." : "محصولی پیدا نشد"}
+        empty={loading ? "در حال بارگذاری..." : items.length ? "محصولی مطابق فیلتر پیدا نشد" : "هنوز کالایی در دیتابیس ثبت نشده؛ با «افزودن محصول» شروع کنید."}
         headers={["محصول", "کد کالا", "دسته", "برند", "رنگ", "قیمت (تومان)", "موجودی", "وضعیت", "عملیات"]}
         rows={filtered.map(p => {
           const isEdit = editing === p.id;
@@ -93,11 +96,11 @@ export default function InventoryPage() {
             <Badge tone={st === "کافی" ? "success" : st === "کم‌موجود" ? "warning" : "danger"}>{st}</Badge>,
             isEdit
               ? <span style={{ display: "flex", gap: 6 }}><Button onClick={() => save(p)}>ذخیره</Button><Button variant="ghost" onClick={() => setEditing(null)}>انصراف</Button></span>
-              : <span style={{ display: "flex", gap: 6 }}><Button variant="secondary" onClick={() => { setEditing(p.id); setDraft({ stock: String(p.stock), price: String(p.price) }); }}>ویرایش</Button><Button variant="danger" onClick={() => remove(p)}>حذف</Button></span>,
+              : <span style={{ display: "flex", gap: 6 }}><Button variant="secondary" onClick={() => { setEditing(p.id); setDraft({ stock: String(p.stock), price: String(p.price) }); }}>ویرایش سریع</Button><Button variant="secondary" href={`/admin/inventory/${p.id}`}>ویرایش کامل</Button><Button variant="danger" onClick={() => remove(p)}>حذف</Button></span>,
           ];
         })}
       />
-      <div className="table-footer"><span>نمایش {filtered.length.toLocaleString("fa-IR")} محصول از کاتالوگ</span><span>همگام‌سازی با فروشگاه: فعال</span></div>
+      <div className="table-footer"><span>نمایش {filtered.length.toLocaleString("fa-IR")} محصول از کاتالوگ</span><span>دیتابیس مشترک با فروشگاه</span></div>
     </Panel>
   </>;
 }
