@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type React from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity, AlertTriangle, Bell, Mail, Boxes, ChevronDown, ChevronLeft, CircleHelp, ClipboardList,
   CreditCard, Gauge, Globe2, LayoutDashboard, LifeBuoy, LogOut, Menu, Moon, Plug, Search,
@@ -53,6 +53,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [me, setMe] = useState<{ name?: string; email?: string; role?: string } | null>(null);
+  useEffect(() => { fetch("/api/admin/me", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then(setMe).catch(() => {}); }, []);
   const isFa = locale === "fa";
   const filteredSearch = useMemo(() => searchable.filter(item => `${item.title} ${item.en} ${item.desc}`.toLowerCase().includes(search.toLowerCase())).slice(0, 6), [search]);
   const getLabel = (key: any) => t(key);
@@ -82,7 +84,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>;
         })}
       </nav>
-      <div className="sidebar-bottom"><div className="support-card"><div className="support-icon"><LifeBuoy size={17}/></div><div><b>{isFa ? "نیاز به راهنمایی دارید؟" : "Need some help?"}</b><span>{isFa ? "راهنمای استفاده از سامانه" : "Explore the user guide"}</span></div><ChevronLeft size={14}/></div><div className="sidebar-user"><div className="user-avatar">م</div><div className="user-meta"><b>{isFa ? "مدیر سیستم" : "System Admin"}</b><span>{isFa ? "دسترسی کامل" : "Full access"}</span></div><button className="icon-button" onClick={() => setProfileOpen(!profileOpen)}><ChevronDown size={16}/></button>{profileOpen && <div className="profile-popover"><Link href="/admin/settings"><Settings size={14}/>{isFa ? "تنظیمات حساب" : "Account settings"}</Link><a href="/admin/login" onClick={logout}><LogOut size={14}/>{t("logout")}</a></div>}</div></div>
+      <div className="sidebar-bottom"><div className="support-card"><div className="support-icon"><LifeBuoy size={17}/></div><div><b>{isFa ? "نیاز به راهنمایی دارید؟" : "Need some help?"}</b><span>{isFa ? "راهنمای استفاده از سامانه" : "Explore the user guide"}</span></div><ChevronLeft size={14}/></div><div className="sidebar-user"><div className="user-avatar">{(me?.name || "م").trim().slice(0, 1)}</div><div className="user-meta"><b>{me?.name || (isFa ? "مدیر سیستم" : "System Admin")}</b><span>{me?.role === "owner" ? (isFa ? "مدیر کل" : "Owner") : me?.email || (isFa ? "مدیر" : "Admin")}</span></div><button className="icon-button" onClick={() => setProfileOpen(!profileOpen)}><ChevronDown size={16}/></button>{profileOpen && <div className="profile-popover"><Link href="/admin/settings"><Settings size={14}/>{isFa ? "تنظیمات حساب" : "Account settings"}</Link><a href="/admin/login" onClick={logout}><LogOut size={14}/>{t("logout")}</a></div>}</div></div>
     </aside>
     <main className="main-shell">
       <header className="topbar">
@@ -93,7 +95,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="toggle-group locale-toggle"><button className={locale === "fa" ? "chosen" : ""} onClick={() => setLocale("fa")}>FA</button><button className={locale === "en" ? "chosen" : ""} onClick={() => setLocale("en")}>EN</button></div>
           <button className="icon-button theme-switch" title={theme === "dark" ? t("light") : t("dark")} onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>{theme === "dark" ? <Sun size={17}/> : <Moon size={17}/>}</button>
           <button className="icon-button notification-button" aria-label="اعلان‌ها" onClick={() => router.push("/admin/notifications")}><Bell size={18}/><i/></button>
-          <div className="topbar-avatar">م</div>
+          <div className="topbar-avatar">{(me?.name || "م").trim().slice(0, 1)}</div>
         </div>
       </header>
       <div className="page-content"><Localize>{children}</Localize></div>

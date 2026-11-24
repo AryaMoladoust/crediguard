@@ -20,19 +20,28 @@ export function safeEqual(a, b) {
   return r === 0;
 }
 
-export async function createToken(secret) {
-  const payload = `v1.${Math.floor(Date.now() / 1000) + MAX_AGE}`;
+// توکن نشست مدیر: a1.<key>.<exp>.<sig> — key یا «owner» (مدیر کل از env) یا شناسه‌ی مدیر در دیتابیس
+export async function createToken(secret, key = 'owner') {
+  const payload = `a1.${key}.${Math.floor(Date.now() / 1000) + MAX_AGE}`;
   return `${payload}.${await hmac(payload, secret)}`;
 }
 
+// خروجی: کلید مدیر (رشته) یا null. توکن‌های قدیمی v1 مربوط به مدیر کل هستند.
 export async function verifyToken(token, secret) {
-  if (!token || !secret || secret.length < 16) return false;
+  if (!token || !secret || secret.length < 16) return null;
   const i = token.lastIndexOf('.');
-  if (i < 0) return false;
+  if (i < 0) return null;
   const payload = token.slice(0, i);
-  const [ver, exp] = payload.split('.');
-  if (ver !== 'v1' || !(Number(exp) > Date.now() / 1000)) return false;
-  return safeEqual(token.slice(i + 1), await hmac(payload, secret));
+  const parts = payload.split('.');
+  let key, exp;
+  if (parts[0] === 'a1' && parts.length === 3) {
+    [, key, exp] = parts;
+    if (key !== 'owner' && !/^[0-9a-f]{24}$/.test(key)) return null;
+  } else if (parts[0] === 'v1' && parts.length === 2) {
+    key = 'owner'; exp = parts[1];
+  } else return null;
+  if (!(Number(exp) > Date.now() / 1000)) return null;
+  return safeEqual(token.slice(i + 1), await hmac(payload, secret)) ? key : null;
 }
 
 export async function checkCredentials(email, password) {

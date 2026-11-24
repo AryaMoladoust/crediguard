@@ -17,6 +17,8 @@ export function StoreProvider({ children }) {
   const [ready, setReady] = useState(false);
   const [toast, setToast] = useState(null);
   const timer = useRef();
+  const wishRef = useRef([]);
+  wishRef.current = wish;
 
   useEffect(() => {
     setCart(normalizeCart(read('mb_cart', []))); setWish(normalizeWish(read('mb_wish', []))); setReady(true);
@@ -47,7 +49,7 @@ export function StoreProvider({ children }) {
   // همگام‌سازی قیمت/موجودی سبد با دیتابیس (صفحه‌ی سبد صدا می‌زند)
   // همگام‌سازی قیمت/موجودی؛ هیچ کالایی خودکار از سبد حذف نمی‌شود (کالای ناموجود با stock=0 علامت می‌خورد و سرور هنگام ثبت سفارش دوباره بررسی می‌کند)
   const syncCart = useCallback((fresh) => setCart((old) => old.map((x) => { const f = fresh?.[x.id]; if (!f) return x; return { ...x, price: Number.isFinite(Number(f.price)) ? Number(f.price) : x.price, stock: Number.isFinite(Number(f.stock)) ? Number(f.stock) : x.stock, name: f.name || x.name, image: f.images?.[0] || f.image || x.image }; })), []);
-  const toggleWish = useCallback((id) => { const key = String(id); setWish((o) => { const has = o.includes(key); notify(has ? 'از علاقه‌مندی‌ها حذف شد' : 'به علاقه‌مندی‌ها اضافه شد'); return has ? o.filter((x) => x !== key) : [...o, key].slice(-100); }); }, [notify]);
+  const toggleWish = useCallback((id) => { const key = String(id); const has = wishRef.current.includes(key); setWish((o) => (o.includes(key) ? o.filter((x) => x !== key) : [...o, key].slice(-100))); notify(has ? 'از علاقه‌مندی‌ها حذف شد' : 'به علاقه‌مندی‌ها اضافه شد'); }, [notify]);
 
   const value = useMemo(() => ({
     ready, cart, wish, add, setQty, remove, clear, syncCart, toggleWish, notify,

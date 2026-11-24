@@ -8,6 +8,7 @@ export const toLatinDigits = (s) =>
 
 // عدد صحیح در بازه؛ در غیر این صورت null
 export function toInt(v, min, max) {
+  if (typeof v === 'string' && !toLatinDigits(v).trim()) return null; // رشته‌ی خالی = مقدار ندارد (نه صفر)
   const n = typeof v === 'string' ? Number(toLatinDigits(v).trim()) : v;
   if (typeof n !== 'number' || !Number.isFinite(n) || !Number.isInteger(n)) return null;
   if (n < min || n > max) return null;
