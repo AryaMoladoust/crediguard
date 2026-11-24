@@ -4,18 +4,22 @@ import { connectDB } from '@/lib/db';
 import Order from '@/models/Order';
 import Product from '@/models/Product';
 import { toInt, toLatinDigits } from '@/lib/catalog';
+import { rateLimit, tooMany } from '@/lib/rate-limit';
+import { getUser } from '@/lib/user-session';
 export const dynamic = 'force-dynamic';
 
 const bad = (error, status = 400) => Response.json({ error }, { status });
 
 // ثبت سفارش از فروشگاه: قیمت از دیتابیس خوانده می‌شود و موجودی به‌صورت اتمیک کم می‌شود
 export async function POST(req) {
+  if (!rateLimit(req, 'orders', 10, 10 * 60_000)) return tooMany();
   let b;
   try { b = await req.json(); } catch { return bad('درخواست نامعتبر'); }
 
   const name = String(b?.customer?.name ?? '').trim();
   const phone = toLatinDigits(b?.customer?.phone).replace(/\s|-/g, '');
   const address = String(b?.customer?.address ?? '').trim();
+  const note = String(b?.note ?? '').trim().slice(0, 500);
   const method = b?.method === 'installment' ? 'installment' : 'cash';
   if (name.length < 2 || name.length > 80) return bad('نام و نام خانوادگی نامعتبر است');
   if (!/^09\d{9}$/.test(phone)) return bad('شماره موبایل نامعتبر است');
@@ -30,6 +34,7 @@ export async function POST(req) {
   }
 
   await connectDB();
+  const user = await getUser();
   const taken = []; // برای برگشت در صورت خطا
   const lines = [];
   try {
@@ -46,7 +51,7 @@ export async function POST(req) {
     let order;
     for (let attempt = 0; attempt < 5 && !order; attempt++) {
       try {
-        order = await Order.create({ code: `ORD-${randomInt(100000, 999999)}`, customer: { name, phone, address }, items: lines, total, method });
+        order = await Order.create({ code: `ORD-${randomInt(100000, 999999)}`, customer: { name, phone, address }, items: lines, total, method, note: note || undefined, user: user?.id });
       } catch (e) { if (e?.code !== 11000) throw e; }
     }
     if (!order) throw new Error('order-create-failed');

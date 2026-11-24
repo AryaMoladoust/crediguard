@@ -1,7 +1,7 @@
 import { connectDB } from '@/lib/db';
 import Product from '@/models/Product';
 import { isAdmin, unauthorized, bad } from '@/lib/admin-guard';
-import { CATEGORY_SLUGS, toInt, shape, cleanImage } from '@/lib/catalog';
+import { CATEGORY_SLUGS, toInt, shape, cleanImages } from '@/lib/catalog';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
@@ -35,10 +35,10 @@ export async function POST(req) {
   if (!/^[A-Za-z0-9_-]{1,40}$/.test(sku)) return bad('کد کالا فقط می‌تواند شامل حروف انگلیسی، عدد، - و _ باشد');
   if (!CATEGORY_SLUGS.includes(b.category)) return bad('دسته‌بندی نامعتبر است');
   const oldPrice = b.oldPrice === undefined || b.oldPrice === '' || b.oldPrice === null ? 0 : toInt(b.oldPrice, 0, 10_000_000_000);
-  const image = cleanImage(b.image);
+  const images = cleanImages(b.images ?? (b.image ? [b.image] : []));
   if (price === null || price < 1) return bad('قیمت باید عدد صحیح بزرگ‌تر از صفر باشد');
   if (oldPrice === null) return bad('قیمت قبلی نامعتبر است');
-  if (image === null) return bad('آدرس تصویر باید با / یا https:// شروع شود');
+  if (images === null) return bad('تصاویر نامعتبرند (حداکثر ۸ تصویر؛ آدرس باید با / یا https:// شروع شود)');
   if (stock === null || minStock === null) return bad('موجودی یا نقطه سفارش نامعتبر است');
   if (hex && !/^#[0-9a-fA-F]{6}$/.test(hex)) return bad('کد رنگ نامعتبر است');
 
@@ -50,7 +50,7 @@ export async function POST(req) {
       name, slug, sku, brand: brand || '—', category: b.category, price, oldPrice: oldPrice || undefined, isOffer: !!b.isOffer, stock, minStock,
       colors: colorName ? [colorName] : [], colorHex: hex || undefined,
       caption: description.slice(0, 100), description,
-      specs: [{ k: 'برند', v: brand || '—' }], image: image || `/img/${b.category}.svg`
+      specs: [{ k: 'برند', v: brand || '—' }], image: images[0] || `/img/${b.category}.svg`, images
     });
     return Response.json(shape(doc.toObject()), { status: 201 });
   } catch (e) {

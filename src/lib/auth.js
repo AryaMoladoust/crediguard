@@ -40,3 +40,19 @@ export async function checkCredentials(email, password) {
   const p = safeEqual(await sha(password), await sha(String(process.env.ADMIN_PASSWORD)));
   return e && p;
 }
+
+// ---- نشست مشتری (جدا از ادمین): u1.<userId>.<exp>.<sig>
+export const USER_COOKIE = 'mb_user';
+export async function createUserToken(uid, secret) {
+  const payload = `u1.${uid}.${Math.floor(Date.now() / 1000) + MAX_AGE * 4}`;
+  return `${payload}.${await hmac(payload, secret)}`;
+}
+export async function verifyUserToken(token, secret) {
+  if (!token || !secret || secret.length < 16) return null;
+  const i = token.lastIndexOf('.');
+  if (i < 0) return null;
+  const payload = token.slice(0, i);
+  const [ver, uid, exp] = payload.split('.');
+  if (ver !== 'u1' || !/^[0-9a-f]{24}$/.test(uid || '') || !(Number(exp) > Date.now() / 1000)) return null;
+  return safeEqual(token.slice(i + 1), await hmac(payload, secret)) ? uid : null;
+}

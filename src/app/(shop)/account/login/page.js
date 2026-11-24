@@ -1,3 +1,5 @@
-import AccountAuth from '@/components/account/AccountAuth';
-export const metadata = { title: 'ورود به حساب | موبایلر' };
-export default function AccountLoginPage() { return <AccountAuth mode="login"/>; }
+import { redirect } from 'next/navigation';
+import AuthForm from '@/components/AuthForm';
+import { getUser } from '@/lib/user-session';
+export const metadata = { title: 'ورود به حساب' };
+export default async function LoginPage() { if (await getUser()) redirect('/account'); return <AuthForm mode="login" />; }

@@ -1,10 +1,10 @@
 "use client";
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, ImagePlus, PackagePlus, Palette, RotateCcw, Save, Trash2 } from "lucide-react";
+import { ArrowRight, Check, ImagePlus, PackagePlus, Palette, RotateCcw, Save, Star, Trash2 } from "lucide-react";
 import { Button, PageHeader, Panel } from "@/admin/components/ui";
 
-export type ProductData = { id: string; sku: string; name: string; category: string; brand: string; price: number; oldPrice: number; stock: number; minStock: number; colors: string[]; colorHex: string; isOffer: boolean; image: string; description: string };
+export type ProductData = { id: string; sku: string; name: string; category: string; brand: string; price: number; oldPrice: number; stock: number; minStock: number; colors: string[]; colorHex: string; isOffer: boolean; image: string; images?: string[]; description: string };
 const CATS: [string, string][] = [["mobile", "گوشی"], ["laptop", "لپ‌تاپ"], ["headphone", "هدفون"], ["powerbank", "پاور بانک"], ["accessory", "لوازم جانبی"]];
 const swatches = ["#111827","#334155","#64748b","#94a3b8","#cbd5e1","#ffffff","#ef4444","#f97316","#f59e0b","#eab308","#84cc16","#22c55e","#10b981","#14b8a6","#06b6d4","#0ea5e9","#3b82f6","#6366f1","#8b5cf6","#a855f7","#d946ef","#ec4899","#f43f5e","#7c2d12"];
 const toLatin = (s: string) => s.replace(/[۰-۹]/g, d => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))).replace(/[٠-٩]/g, d => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
@@ -13,6 +13,8 @@ const hexToRgb = (hex: string) => { const h = hex.replace("#", ""); return [pars
 const rgbToHex = (r: number, g: number, b: number) => "#" + [r, g, b].map(v => Math.max(0, Math.min(255, v)).toString(16).padStart(2, "0")).join("").toUpperCase();
 
 const MAX_UPLOAD = 3 * 1024 * 1024;
+const MAX_IMAGES = 8;
+const isDefaultImg = (u: string) => /^\/img\/[a-z-]+\.svg$/.test(u);
 // کوچک‌کردن تصویر در مرورگر (حداکثر ۱۴۰۰ پیکسل، WebP) تا آپلود سریع باشد و فروشگاه سبک بماند
 async function shrinkImage(file: File): Promise<Blob> {
   if (file.type === "image/gif") return file; // انیمیشن حفظ شود
@@ -41,7 +43,9 @@ export function ProductForm({ product }: { product?: ProductData }) {
   const [stock, setStock] = useState(product ? String(product.stock) : "1");
   const [minStock, setMinStock] = useState(product ? String(product.minStock) : "5");
   const [description, setDescription] = useState(product?.description ?? "");
-  const [image, setImage] = useState(product?.image && !/^\/img\/[a-z-]+\.svg$/.test(product.image) ? product.image : "");
+  const [images, setImages] = useState<string[]>(() => (product?.images?.length ? product.images : product?.image ? [product.image] : []).filter(u => !isDefaultImg(u)));
+  const [urlInput, setUrlInput] = useState("");
+  const image = images[0] ?? "";
   const [isOffer, setIsOffer] = useState(product?.isOffer ?? false);
   const [color, setColor] = useState(product?.colorHex || "#477EF4");
   const [colorName, setColorName] = useState(product?.colors?.[0] ?? "");
@@ -53,25 +57,41 @@ export function ProductForm({ product }: { product?: ProductData }) {
   const setRgb = (i: number, v: number) => { const n = [...rgb]; n[i] = v; setColor(rgbToHex(n[0], n[1], n[2])); };
   const catName = CATS.find(c => c[0] === category)?.[1] ?? "";
 
-  async function onPickFile(e: ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    e.target.value = "";
-    if (!f) return;
-    if (!/^image\/(jpeg|png|webp|gif)$/.test(f.type)) return setError("فقط تصویر JPG، PNG، WebP یا GIF مجاز است.");
+  async function uploadOne(f: File): Promise<string | null> {
+    if (!/^image\/(jpeg|png|webp|gif)$/.test(f.type)) { setError(`«${f.name}»: فقط تصویر JPG، PNG، WebP یا GIF مجاز است.`); return null; }
+    const blob = await shrinkImage(f);
+    if (blob.size > MAX_UPLOAD) { setError(`«${f.name}»: حجم بعد از بهینه‌سازی هنوز بیشتر از ۳ مگابایت است.`); return null; }
+    const fd = new FormData(); fd.append("file", blob, f.name);
+    const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+    if (res.status === 401) { window.location.href = "/admin/login"; return null; }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { setError(data.error || "آپلود تصویر ناموفق بود."); return null; }
+    return data.url as string;
+  }
+  // انتخاب چندتایی: هر فایل جداگانه آپلود می‌شود و به گالری اضافه می‌شود
+  async function onPickFiles(e: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []); e.target.value = "";
+    if (!files.length) return;
+    const room = MAX_IMAGES - images.length;
+    if (room <= 0) return setError(`حداکثر ${MAX_IMAGES} تصویر مجاز است.`);
     setUploading(true); setError("");
     try {
-      const blob = await shrinkImage(f);
-      if (blob.size > MAX_UPLOAD) { setError("حجم تصویر بعد از بهینه‌سازی هنوز بیشتر از ۳ مگابایت است؛ تصویر کوچک‌تری انتخاب کنید."); return; }
-      const fd = new FormData();
-      fd.append("file", blob, f.name);
-      const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
-      if (res.status === 401) { window.location.href = "/admin/login"; return; }
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) { setError(data.error || "آپلود تصویر ناموفق بود."); return; }
-      setImage(data.url);
+      const added: string[] = [];
+      for (const f of files.slice(0, room)) { const u = await uploadOne(f); if (u) added.push(u); }
+      if (added.length) setImages(old => [...old, ...added].slice(0, MAX_IMAGES));
+      if (files.length > room) setError(`فقط ${room} تصویر اول اضافه شد (سقف ${MAX_IMAGES} تصویر).`);
     } catch { setError("ارتباط با سرور برقرار نشد."); }
     finally { setUploading(false); }
   }
+  function addUrl() {
+    const u = urlInput.trim(); if (!u) return;
+    if (!/^(\/(?!\/)\S*|https:\/\/\S+)$/.test(u)) return setError("آدرس تصویر باید با / یا https:// شروع شود.");
+    if (images.includes(u)) return setError("این تصویر قبلاً اضافه شده است.");
+    if (images.length >= MAX_IMAGES) return setError(`حداکثر ${MAX_IMAGES} تصویر مجاز است.`);
+    setImages([...images, u]); setUrlInput(""); setError("");
+  }
+  const removeImg = (i: number) => setImages(images.filter((_, k) => k !== i));
+  const makeMain = (i: number) => setImages([images[i], ...images.filter((_, k) => k !== i)]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -84,7 +104,7 @@ export function ProductForm({ product }: { product?: ProductData }) {
     if (op && op <= p) return setError("قیمت قبلی (قبل از تخفیف) باید بیشتر از قیمت فروش باشد، یا خالی بماند.");
     if (!Number.isInteger(st) || st < 0 || !Number.isInteger(ms) || ms < 0) return setError("موجودی و نقطه سفارش باید عدد صحیح ۰ یا بیشتر باشند.");
     setBusy(true); setError("");
-    const body: Record<string, unknown> = { name: name.trim(), category, brand: brand.trim(), price: p, oldPrice: op, stock: st, minStock: ms, description, image: image.trim(), isOffer, colorName: colorName.trim(), hex: color };
+    const body: Record<string, unknown> = { name: name.trim(), category, brand: brand.trim(), price: p, oldPrice: op, stock: st, minStock: ms, description, images, isOffer, colorName: colorName.trim(), hex: color };
     if (!edit) body.sku = sku.trim();
     try {
       const res = await fetch(edit ? `/api/admin/products/${product!.id}` : "/api/admin/products", { method: edit ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -111,18 +131,22 @@ export function ProductForm({ product }: { product?: ProductData }) {
             <label className="form-field"><span>قیمت قبل از تخفیف (اختیاری)</span><input inputMode="numeric" value={oldPrice} onChange={e => setOldPrice(e.target.value)} placeholder="برای نمایش درصد تخفیف"/></label>
             <label className="form-field"><span>موجودی</span><input inputMode="numeric" value={stock} onChange={e => setStock(e.target.value)}/></label>
             <label className="form-field"><span>نقطه سفارش مجدد</span><input inputMode="numeric" value={minStock} onChange={e => setMinStock(e.target.value)}/><small>با رسیدن موجودی به این عدد، هشدار کمبود نمایش داده می‌شود.</small></label>
-            <div className="form-field span-2"><span>تصویر محصول</span>
-              <div className="image-upload-row">
-                <div className="image-upload-thumb">{image ? <img src={image} alt=""/> : <ImagePlus size={22}/>}</div>
-                <div className="image-upload-actions">
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <label className="btn btn-secondary" style={uploading ? { opacity: .6, pointerEvents: "none" } : undefined}><span className="btn-icon"><ImagePlus size={15}/></span><span>{uploading ? "در حال آپلود..." : image ? "تغییر تصویر" : "انتخاب تصویر از سیستم"}</span><input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={onPickFile} disabled={uploading} hidden/></label>
-                    {image && <button type="button" className="btn btn-ghost" onClick={() => setImage("")}><span className="btn-icon"><Trash2 size={14}/></span><span>حذف تصویر</span></button>}
+            <div className="form-field span-2"><span>تصاویر محصول <small>({images.length.toLocaleString("fa-IR")} از {MAX_IMAGES.toLocaleString("fa-IR")})</small></span>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(104px, 1fr))", gap: 10 }}>
+                {images.map((u, i) => <div key={u} style={{ position: "relative", border: i === 0 ? "2px solid var(--brand, #f26a1b)" : "1px solid #d9dce8", borderRadius: 12, overflow: "hidden", background: "#f6f7fb" }}>
+                  <img src={u} alt="" style={{ width: "100%", aspectRatio: "1", objectFit: "contain", display: "block" }}/>
+                  {i === 0 && <b style={{ position: "absolute", top: 4, right: 4, fontSize: 10, background: "#f26a1b", color: "#fff", borderRadius: 6, padding: "1px 6px" }}>تصویر اصلی</b>}
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: 4, background: "rgba(255,255,255,.92)" }}>
+                    {i !== 0 ? <button type="button" className="icon-button" onClick={() => makeMain(i)} aria-label="انتخاب به‌عنوان تصویر اصلی" title="تصویر اصلی"><Star size={14}/></button> : <span/>}
+                    <button type="button" className="icon-button" onClick={() => removeImg(i)} aria-label="حذف تصویر"><Trash2 size={14}/></button>
                   </div>
-                  <small>JPG، PNG، WebP یا GIF؛ تصویر قبل از ارسال به‌صورت خودکار بهینه می‌شود. خالی = تصویر پیش‌فرض دسته.</small>
-                </div>
+                </div>)}
+                {images.length < MAX_IMAGES && <label className="btn btn-secondary" style={{ minHeight: 104, flexDirection: "column", cursor: "pointer", ...(uploading ? { opacity: .6, pointerEvents: "none" } : {}) }}>
+                  <ImagePlus size={22}/><span>{uploading ? "در حال آپلود..." : "افزودن تصویر"}</span>
+                  <input type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif" onChange={onPickFiles} disabled={uploading} hidden/></label>}
               </div>
-              <input dir="ltr" value={image} onChange={e => setImage(e.target.value)} placeholder="یا آدرس تصویر: /img/products/a55.jpg  یا  https://..."/>
+              <small>می‌توانید چند تصویر را یک‌جا انتخاب کنید. اولین تصویر در فروشگاه به‌عنوان تصویر اصلی نمایش داده می‌شود؛ با ستاره، تصویر اصلی را عوض کنید. هر تصویر به‌صورت خودکار بهینه می‌شود (حداکثر ۳ مگابایت).</small>
+              <div style={{ display: "flex", gap: 8 }}><input dir="ltr" value={urlInput} onChange={e => setUrlInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addUrl(); } }} placeholder="یا آدرس تصویر: https://... یا /img/products/a55.jpg" style={{ flex: 1 }}/><button type="button" className="btn btn-secondary" onClick={addUrl}>افزودن آدرس</button></div>
             </div>
             <label className="form-field" style={{ justifyContent: "flex-end" }}><span>پیشنهاد ویژه</span><span style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="checkbox" checked={isOffer} onChange={e => setIsOffer(e.target.checked)}/> نمایش به‌عنوان پیشنهاد ویژه</span></label>
             <label className="form-field span-2"><span>توضیحات محصول</span><textarea rows={4} value={description} onChange={e => setDescription(e.target.value)} maxLength={2000} placeholder="توضیحات و ویژگی‌های کلیدی..."/></label>
