@@ -9,6 +9,7 @@ export const CATEGORIES = [
 ];
 export const catName = (slug) => CATEGORIES.find((c) => c.slug === slug)?.name || 'کالا';
 export const ORDER_STATUS = {
+  awaiting_payment: { label: 'در انتظار پرداخت', step: 0 },
   pending: { label: 'در انتظار تأیید', step: 0 },
   confirmed: { label: 'تأیید شده', step: 1 },
   completed: { label: 'تحویل شده', step: 2 },

@@ -15,12 +15,12 @@ export async function GET() {
     const start = startOfTehranDay();
     const since = new Date(Date.now() - WEEKS * WEEK);
     const [todayAgg, byStatus, inv, recent, weekly, installmentAgg] = await Promise.all([
-      Order.aggregate([{ $match: { createdAt: { $gte: start }, status: { $ne: 'cancelled' } } }, { $group: { _id: null, sales: { $sum: '$total' }, orders: { $sum: 1 } } }]),
+      Order.aggregate([{ $match: { createdAt: { $gte: start }, status: { $nin: ['cancelled', 'awaiting_payment'] } } }, { $group: { _id: null, sales: { $sum: '$total' }, orders: { $sum: 1 } } }]),
       Order.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
       Product.aggregate([{ $project: { out: { $lte: ['$stock', 0] }, low: { $and: [{ $gt: ['$stock', 0] }, { $lte: ['$stock', { $ifNull: ['$minStock', 5] }] }] } } },
         { $group: { _id: null, total: { $sum: 1 }, out: { $sum: { $cond: ['$out', 1, 0] } }, low: { $sum: { $cond: ['$low', 1, 0] } } } }]),
-      Order.find().sort({ createdAt: -1 }).limit(6).lean(),
-      Order.aggregate([{ $match: { createdAt: { $gte: since }, status: { $ne: 'cancelled' } } }, { $project: { total: 1, createdAt: 1, method: 1 } }]),
+      Order.find({ status: { $ne: 'awaiting_payment' } }).sort({ createdAt: -1 }).limit(6).lean(),
+      Order.aggregate([{ $match: { createdAt: { $gte: since }, status: { $nin: ['cancelled', 'awaiting_payment'] } } }, { $project: { total: 1, createdAt: 1, method: 1 } }]),
       Order.aggregate([{ $match: { method: 'installment', status: { $ne: 'cancelled' } } }, { $group: { _id: null, count: { $sum: 1 }, sum: { $sum: '$total' } } }])
     ]);
     const t = todayAgg[0] || { sales: 0, orders: 0 };

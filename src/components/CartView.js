@@ -11,8 +11,8 @@ export default function CartView() {
   // قیمت و موجودی سبد با دیتابیس همگام می‌شود
   useEffect(() => {
     if (!ready || !cart.length) return;
-    fetch(`/api/products?ids=${cart.map((x) => x.id).join(',')}&limit=40`).then((r) => r.json()).then((d) => {
-      if (Array.isArray(d.items)) syncCart(Object.fromEntries(d.items.map((p) => [p.id, p])));
+    fetch(`/api/products?ids=${cart.map((x) => x.id).join(',')}&limit=40`).then((r) => (r.ok ? r.json() : null)).then((d) => {
+      if (d && Array.isArray(d.items)) syncCart(Object.fromEntries(d.items.map((p) => [p.id, p])));
     }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
@@ -32,6 +32,7 @@ export default function CartView() {
               <Link href={`/product/${x.slug}`} className="size-24 shrink-0 rounded-xl bg-ink-50 p-2"><SmartImg src={x.image} alt={x.name} category={x.category} className="h-full w-full object-contain" /></Link>
               <div className="flex min-w-0 flex-1 flex-col">
                 <Link href={`/product/${x.slug}`} className="line-clamp-2 text-sm font-bold leading-6 hover:text-brand-600">{x.name}</Link>
+                {x.stock <= 0 && <small className="font-semibold text-red-600">این کالا ناموجود شده؛ برای ادامه حذفش کنید.</small>}
                 <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-2">
                   <div className="flex items-center rounded-xl ring-1 ring-ink-200">
                     <button type="button" className="grid size-9 place-items-center disabled:opacity-40" disabled={x.qty <= 1} onClick={() => setQty(x.id, x.qty - 1)} aria-label="کم کردن"><Minus size={15} /></button>
@@ -51,7 +52,9 @@ export default function CartView() {
           <div className="flex justify-between text-sm"><span className="text-ink-500">هزینه ارسال</span><b>{left === 0 ? 'رایگان' : 'محاسبه در مرحله بعد'}</b></div>
           {left > 0 && <p className="flex items-start gap-2 rounded-xl bg-brand-50 p-3 text-xs font-semibold leading-6 text-brand-700"><Truck size={16} className="mt-0.5 shrink-0" />با {left.toLocaleString('fa-IR')} تومان خرید بیشتر، ارسال رایگان می‌شود.</p>}
           <div className="flex justify-between border-t border-ink-100 pt-4"><span className="font-bold">مبلغ قابل پرداخت</span><b className="text-lg">{total.toLocaleString('fa-IR')} تومان</b></div>
-          <Link href="/checkout" className="btn btn-primary w-full !min-h-12">ادامه و ثبت سفارش <ArrowLeft size={18} /></Link>
+          {cart.some((x) => x.stock <= 0)
+            ? <button type="button" disabled className="btn btn-primary w-full !min-h-12 opacity-50">ابتدا کالای ناموجود را حذف کنید</button>
+            : <Link href="/checkout" className="btn btn-primary w-full !min-h-12">ادامه و ثبت سفارش <ArrowLeft size={18} /></Link>}
         </aside>
       </div>
     </div>

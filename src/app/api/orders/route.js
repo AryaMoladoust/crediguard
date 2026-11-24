@@ -1,11 +1,13 @@
 import mongoose from 'mongoose';
 import { randomInt } from 'node:crypto';
 import { connectDB } from '@/lib/db';
-import Order from '@/models/Order';
+import Order, { AWAITING_PAYMENT } from '@/models/Order';
 import Product from '@/models/Product';
 import { toInt, toLatinDigits } from '@/lib/catalog';
 import { rateLimit, tooMany } from '@/lib/rate-limit';
 import { getUser } from '@/lib/user-session';
+import { createPayToken } from '@/lib/auth';
+import { releaseExpiredOrders, payUrl } from '@/lib/payment';
 export const dynamic = 'force-dynamic';
 
 const bad = (error, status = 400) => Response.json({ error }, { status });
@@ -25,6 +27,7 @@ export async function POST(req) {
   if (!/^09\d{9}$/.test(phone)) return bad('شماره موبایل نامعتبر است');
   if (address.length < 5 || address.length > 500) return bad('آدرس نامعتبر است');
   if (!Array.isArray(b.items) || b.items.length < 1 || b.items.length > 20) return bad('سبد خرید نامعتبر است');
+  if (method === 'cash' && (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 16)) return bad('SESSION_SECRET تنظیم نشده است', 500);
 
   const wanted = new Map(); // productId -> qty (ادغام ردیف‌های تکراری)
   for (const it of b.items) {
@@ -34,6 +37,7 @@ export async function POST(req) {
   }
 
   await connectDB();
+  await releaseExpiredOrders().catch(() => {}); // آزادکردن موجودیِ سفارش‌های پرداخت‌نشده‌ی منقضی
   const user = await getUser();
   const taken = []; // برای برگشت در صورت خطا
   const lines = [];
@@ -51,11 +55,13 @@ export async function POST(req) {
     let order;
     for (let attempt = 0; attempt < 5 && !order; attempt++) {
       try {
-        order = await Order.create({ code: `ORD-${randomInt(100000, 999999)}`, customer: { name, phone, address }, items: lines, total, method, note: note || undefined, user: user?.id });
+        order = await Order.create({ code: `ORD-${randomInt(100000, 999999)}`, customer: { name, phone, address }, items: lines, total, method, note: note || undefined, user: user?.id, ...(method === 'cash' && { status: AWAITING_PAYMENT, payment: { status: 'unpaid' } }) });
       } catch (e) { if (e?.code !== 11000) throw e; }
     }
     if (!order) throw new Error('order-create-failed');
-    return Response.json({ ok: true, code: order.code, total }, { status: 201 });
+    // سفارش نقدی: کاربر به درگاه پرداخت می‌رود؛ تأیید فقط بعد از پرداخت موفق انجام می‌شود
+    const pay = method === 'cash' ? payUrl(await createPayToken(String(order._id), process.env.SESSION_SECRET)) : undefined;
+    return Response.json({ ok: true, code: order.code, total, payUrl: pay }, { status: 201 });
   } catch (e) {
     await Promise.all(taken.map(([pid, qty]) => Product.updateOne({ _id: pid }, { $inc: { stock: qty, sold: -qty } })));
     if (e.userMsg) return bad(e.userMsg, 409);

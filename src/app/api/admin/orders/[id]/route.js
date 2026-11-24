@@ -16,7 +16,7 @@ export async function PATCH(req, { params }) {
   try {
     await connectDB();
     // سفارش لغو‌شده دیگر تغییر نمی‌کند؛ شرط status≠cancelled جلوی برگشت‌دادن دوباره‌ی موجودی را می‌گیرد
-    const before = await Order.findOneAndUpdate({ _id: id, status: { $ne: 'cancelled' } }, { status: b.status }, { new: false }).lean();
+    const before = await Order.findOneAndUpdate({ _id: id, status: { $nin: ['cancelled', 'awaiting_payment'] } }, { status: b.status }, { new: false }).lean();
     if (!before) {
       return (await Order.exists({ _id: id })) ? bad('سفارش لغوشده قابل تغییر نیست', 409) : bad('سفارش پیدا نشد', 404);
     }

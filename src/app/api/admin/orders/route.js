@@ -8,7 +8,7 @@ export async function GET() {
   if (!(await isAdmin())) return unauthorized();
   try {
     await connectDB();
-    const items = await Order.find().sort({ createdAt: -1 }).limit(500).lean();
+    const items = await Order.find({ status: { $ne: 'awaiting_payment' } }).sort({ createdAt: -1 }).limit(500).lean();
     const ids = [...new Set(items.flatMap((o) => (o.items || []).map((i) => i.product && String(i.product))).filter(Boolean))];
     const prods = ids.length ? await Product.find({ _id: { $in: ids } }).select('category').lean() : [];
     const catOf = new Map(prods.map((p) => [String(p._id), p.category]));
@@ -24,6 +24,7 @@ export async function GET() {
         total: o.total || 0,
         method: o.method || 'cash',
         status: o.status || 'pending',
+        paid: o.payment?.status === 'paid',
         createdAt: o.createdAt,
         updatedAt: o.updatedAt
       }))

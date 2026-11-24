@@ -12,7 +12,8 @@ export async function GET(req) {
   try {
     await connectDB();
     const list = await Order.aggregate([
-      ...(phone ? [{ $match: { 'customer.phone': phone } }] : []),
+      { $match: { status: { $ne: 'awaiting_payment' } } },
+    ...(phone ? [{ $match: { 'customer.phone': phone } }] : []),
       { $sort: { createdAt: 1 } },
       { $group: {
         _id: '$customer.phone',
@@ -31,7 +32,7 @@ export async function GET(req) {
     const customers = list.map((c) => ({ id: c._id, phone: c._id, name: c.name || '—', address: c.address || '', orders: c.orders, activeOrders: c.activeOrders, spent: c.spent, installmentOrders: c.installmentOrders, first: c.first, last: c.last }));
     if (!phone) return Response.json(customers);
     if (!customers.length) return bad('مشتری پیدا نشد', 404);
-    const orders = await Order.find({ 'customer.phone': phone }).sort({ createdAt: -1 }).limit(100).lean();
+    const orders = await Order.find({ 'customer.phone': phone, status: { $ne: 'awaiting_payment' } }).sort({ createdAt: -1 }).limit(100).lean();
     return Response.json({
       customer: customers[0],
       orders: orders.map((o) => ({

@@ -43,7 +43,8 @@ export function StoreProvider({ children }) {
   const remove = useCallback((id) => setCart((o) => o.filter((x) => x.id !== id)), []);
   const clear = useCallback(() => setCart([]), []);
   // همگام‌سازی قیمت/موجودی سبد با دیتابیس (صفحه‌ی سبد صدا می‌زند)
-  const syncCart = useCallback((fresh) => setCart((old) => old.flatMap((x) => { const f = fresh[x.id]; if (!f) return []; return [{ ...x, price: f.price, stock: f.stock, name: f.name, image: f.images?.[0] || f.image || x.image, qty: Math.min(x.qty, Math.max(f.stock, 0)) }].filter((y) => y.qty > 0); })), []);
+  // همگام‌سازی قیمت/موجودی؛ هیچ کالایی خودکار از سبد حذف نمی‌شود (کالای ناموجود با stock=0 علامت می‌خورد و سرور هنگام ثبت سفارش دوباره بررسی می‌کند)
+  const syncCart = useCallback((fresh) => setCart((old) => old.map((x) => { const f = fresh[x.id]; if (!f) return { ...x, stock: 0 }; return { ...x, price: f.price, stock: f.stock, name: f.name, image: f.images?.[0] || f.image || x.image, qty: f.stock > 0 ? Math.min(x.qty, f.stock) : x.qty }; })), []);
   const toggleWish = useCallback((id) => setWish((o) => { const has = o.includes(id); notify(has ? 'از علاقه‌مندی‌ها حذف شد' : 'به علاقه‌مندی‌ها اضافه شد'); return has ? o.filter((x) => x !== id) : [...o, id]; }), [notify]);
 
   const value = useMemo(() => ({

@@ -35,7 +35,8 @@ export default function TrackForm({ initialCode = '' }) {
               <li key={s} className="text-center"><span className={`mx-auto mb-1.5 grid size-9 place-items-center rounded-full text-sm font-bold ${i <= st.step ? 'bg-brand text-white' : 'bg-ink-100 text-ink-400'}`}>{i <= st.step ? <Check size={17} /> : (i + 1).toLocaleString('fa-IR')}</span><span className={`text-xs font-semibold ${i <= st.step ? 'text-ink' : 'text-ink-400'}`}>{s}</span></li>))}</ol>
           )}
           <ul className="divide-y divide-ink-100 text-sm">{o.items.map((i, k) => <li key={k} className="flex justify-between gap-3 py-2.5"><span>{i.name} <span className="text-ink-500">× {i.qty.toLocaleString('fa-IR')}</span></span><b>{(i.price * i.qty).toLocaleString('fa-IR')}</b></li>)}</ul>
-          <div className="flex flex-wrap justify-between gap-2 border-t border-ink-100 pt-4 text-sm"><span className="text-ink-500">{METHOD_LABEL[o.method]} · {fmtDate(o.createdAt)}</span><b className="text-base">{o.total.toLocaleString('fa-IR')} تومان</b></div>
+          {o.payUrl && <a href={o.payUrl} className="btn btn-primary w-full">ادامه‌ی پرداخت</a>}
+          <div className="flex flex-wrap justify-between gap-2 border-t border-ink-100 pt-4 text-sm"><span className="text-ink-500">{METHOD_LABEL[o.method]}{o.paid ? ' · پرداخت‌شده' : ''} · {fmtDate(o.createdAt)}</span><b className="text-base">{o.total.toLocaleString('fa-IR')} تومان</b></div>
         </div>
       )}
     </div>

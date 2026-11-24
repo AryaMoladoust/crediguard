@@ -56,3 +56,19 @@ export async function verifyUserToken(token, secret) {
   if (ver !== 'u1' || !/^[0-9a-f]{24}$/.test(uid || '') || !(Number(exp) > Date.now() / 1000)) return null;
   return safeEqual(token.slice(i + 1), await hmac(payload, secret)) ? uid : null;
 }
+
+// ---- توکن پرداخت (سفارش نقدی): p1.<orderId>.<exp>.<sig> — ۳۰ دقیقه اعتبار
+export const PAY_WINDOW_SEC = 30 * 60;
+export async function createPayToken(oid, secret) {
+  const payload = `p1.${oid}.${Math.floor(Date.now() / 1000) + PAY_WINDOW_SEC}`;
+  return `${payload}.${await hmac(payload, secret)}`;
+}
+export async function verifyPayToken(token, secret) {
+  if (!token || !secret || secret.length < 16) return null;
+  const i = token.lastIndexOf('.');
+  if (i < 0) return null;
+  const payload = token.slice(0, i);
+  const [ver, oid, exp] = payload.split('.');
+  if (ver !== 'p1' || !/^[0-9a-f]{24}$/.test(oid || '') || !(Number(exp) > Date.now() / 1000)) return null;
+  return safeEqual(token.slice(i + 1), await hmac(payload, secret)) ? oid : null;
+}

@@ -10,7 +10,7 @@ export async function GET() {
   try {
     await connectDB();
     const [orders, stock] = await Promise.all([
-      Order.find().sort({ updatedAt: -1 }).limit(30).lean(),
+      Order.find({ status: { $ne: 'awaiting_payment' } }).sort({ updatedAt: -1 }).limit(30).lean(),
       Product.find({ $expr: { $lte: ['$stock', { $ifNull: ['$minStock', 5] }] } }).sort({ stock: 1 }).limit(50).lean()
     ]);
     return Response.json({

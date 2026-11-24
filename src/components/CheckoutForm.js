@@ -7,6 +7,8 @@ import { useStore } from './store';
 import SmartImg from './SmartImg';
 import { SITE } from '@/lib/site';
 
+const DRAFT = 'mb_checkout'; // پیش‌نویس فرم در sessionStorage تا با رفرش/برگشت پاک نشود
+
 export default function CheckoutForm() {
   const { ready, cart, total, clear } = useStore();
   const router = useRouter();
@@ -20,6 +22,11 @@ export default function CheckoutForm() {
     fetch('/api/auth/me').then((r) => r.json()).then(({ user }) => { if (user) { setLoggedIn(true); setF((o) => ({ ...o, name: o.name || user.name, phone: o.phone || user.phone, address: o.address || user.address })); } }).catch(() => {});
   }, []);
 
+  useEffect(() => { // بازیابی پیش‌نویس (قبل از افکت ذخیره تعریف شده است)
+    try { const d = JSON.parse(sessionStorage.getItem(DRAFT)); if (d) { setF((o) => ({ ...o, ...d.f })); if (d.method === 'cash' || d.method === 'installment') setMethod(d.method); } } catch {}
+  }, []);
+  useEffect(() => { try { sessionStorage.setItem(DRAFT, JSON.stringify({ f, method })); } catch {} }, [f, method]);
+
   if (!ready) return <div className="wrap py-16 text-center text-ink-500">در حال بارگذاری...</div>;
   if (!cart.length) return <div className="wrap py-16"><div className="card mx-auto max-w-md p-10 text-center"><h1 className="text-xl">سبد خرید شما خالی است</h1><Link href="/products" className="btn btn-primary mt-5">رفتن به فروشگاه</Link></div></div>;
 
@@ -31,7 +38,8 @@ export default function CheckoutForm() {
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error || 'ثبت سفارش انجام نشد');
       clear();
-      router.push(`/order/success?code=${d.code}&method=${method}`);
+      try { sessionStorage.removeItem(DRAFT); } catch {}
+      router.push(d.payUrl || `/order/success?code=${d.code}&method=${method}`); // نقدی ← درگاه پرداخت
     } catch (x) { setErr(x.message); setBusy(false); }
   }
 
@@ -53,14 +61,14 @@ export default function CheckoutForm() {
           <section className="card p-5 sm:p-6">
             <h2 className="mb-4 text-lg">روش پرداخت</h2>
             <div className="grid gap-3 sm:grid-cols-2">
-              {[['cash', Banknote, 'پرداخت نقدی', 'پس از ثبت سفارش، هماهنگی پرداخت انجام می‌شود'], ['installment', CreditCard, 'درخواست خرید اقساطی', 'پس از بررسی اعتبار، با شما تماس می‌گیریم']].map(([v, I, t, s]) => (
+              {[['cash', Banknote, 'پرداخت نقدی', 'پرداخت آنلاین در درگاه؛ بعد از پرداخت موفق، سفارش خودکار تأیید می‌شود'], ['installment', CreditCard, 'درخواست خرید اقساطی', 'پس از بررسی اعتبار، با شما تماس می‌گیریم']].map(([v, I, t, s]) => (
                 <label key={v} className={`flex cursor-pointer gap-3 rounded-2xl p-4 ring-2 transition ${method === v ? 'bg-brand-50 ring-brand' : 'ring-ink-100 hover:ring-ink-200'}`}>
                   <input type="radio" name="method" className="mt-1 accent-brand" checked={method === v} onChange={() => setMethod(v)} />
                   <span><b className="flex items-center gap-1.5 text-sm"><I size={17} className="text-brand" />{t}</b><small className="mt-1 block leading-6 text-ink-500">{s}</small></span>
                 </label>
               ))}
             </div>
-            <p className="mt-3 text-xs text-ink-500">پرداخت آنلاین در این نسخه فعال نیست.</p>
+            <p className="mt-3 text-xs text-ink-500">درگاه پرداخت در این نسخه شبیه‌ساز است و به بانک واقعی وصل نیست.</p>
           </section>
         </div>
         <aside className="card h-fit space-y-4 p-5 lg:sticky lg:top-24">
@@ -69,7 +77,7 @@ export default function CheckoutForm() {
           <div className="flex justify-between border-t border-ink-100 pt-4 text-sm"><span className="text-ink-500">ارسال</span><b>{total >= SITE.freeShipping ? 'رایگان' : 'پس از ثبت اعلام می‌شود'}</b></div>
           <div className="flex justify-between"><span className="font-bold">مبلغ کل</span><b className="text-lg">{total.toLocaleString('fa-IR')} تومان</b></div>
           {err && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{err}</p>}
-          <button className="btn btn-primary w-full !min-h-12" disabled={busy}>{busy ? 'در حال ثبت سفارش...' : 'ثبت نهایی سفارش'}</button>
+          <button className="btn btn-primary w-full !min-h-12" disabled={busy}>{busy ? 'در حال ثبت سفارش...' : method === 'cash' ? 'ثبت سفارش و رفتن به درگاه پرداخت' : 'ثبت نهایی سفارش'}</button>
         </aside>
       </form>
     </div>
