@@ -6,7 +6,9 @@ import { CheckCircle2, AlertCircle } from 'lucide-react';
 const Ctx = createContext(null);
 export const useStore = () => useContext(Ctx);
 
-const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+const read = (k, d) => { try { const value = JSON.parse(localStorage.getItem(k)); return value ?? d; } catch { return d; } };
+const normalizeCart = (value) => Array.isArray(value) ? value.filter((x) => x && typeof x.id === 'string').map((x) => ({ ...x, qty: Math.max(1, Math.min(Number(x.qty) || 1, 20)), price: Math.max(0, Number(x.price) || 0), stock: Math.max(0, Number(x.stock) || 0) })) : [];
+const normalizeWish = (value) => Array.isArray(value) ? [...new Set(value.filter((x) => typeof x === 'string' && x.length > 0))] : [];
 const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 
 export function StoreProvider({ children }) {
@@ -17,8 +19,8 @@ export function StoreProvider({ children }) {
   const timer = useRef();
 
   useEffect(() => {
-    setCart(read('mb_cart', [])); setWish(read('mb_wish', [])); setReady(true);
-    const sync = (e) => { if (e.key === 'mb_cart') setCart(read('mb_cart', [])); if (e.key === 'mb_wish') setWish(read('mb_wish', [])); };
+    setCart(normalizeCart(read('mb_cart', []))); setWish(normalizeWish(read('mb_wish', []))); setReady(true);
+    const sync = (e) => { if (e.key === 'mb_cart') setCart(normalizeCart(read('mb_cart', []))); if (e.key === 'mb_wish') setWish(normalizeWish(read('mb_wish', []))); };
     window.addEventListener('storage', sync);
     return () => window.removeEventListener('storage', sync);
   }, []);
@@ -33,7 +35,7 @@ export function StoreProvider({ children }) {
     if (!p || p.stock <= 0) return notify('این کالا ناموجود است', 'err');
     setCart((old) => {
       const f = old.find((x) => x.id === p.id);
-      const next = Math.min((f?.qty || 0) + qty, p.stock, 20);
+      const next = Math.min((f?.qty || 0) + qty, Math.max(0, Number(p.stock) || 0), 20);
       if (f) return old.map((x) => (x.id === p.id ? { ...x, qty: next, stock: p.stock, price: p.price } : x));
       return [...old, { id: p.id, slug: p.slug, name: p.name, price: p.price, image: p.images?.[0] || p.image || '', category: p.category, stock: p.stock, qty: Math.min(qty, p.stock, 20) }];
     });
@@ -44,8 +46,8 @@ export function StoreProvider({ children }) {
   const clear = useCallback(() => setCart([]), []);
   // همگام‌سازی قیمت/موجودی سبد با دیتابیس (صفحه‌ی سبد صدا می‌زند)
   // همگام‌سازی قیمت/موجودی؛ هیچ کالایی خودکار از سبد حذف نمی‌شود (کالای ناموجود با stock=0 علامت می‌خورد و سرور هنگام ثبت سفارش دوباره بررسی می‌کند)
-  const syncCart = useCallback((fresh) => setCart((old) => old.map((x) => { const f = fresh[x.id]; if (!f) return { ...x, stock: 0 }; return { ...x, price: f.price, stock: f.stock, name: f.name, image: f.images?.[0] || f.image || x.image, qty: f.stock > 0 ? Math.min(x.qty, f.stock) : x.qty }; })), []);
-  const toggleWish = useCallback((id) => setWish((o) => { const has = o.includes(id); notify(has ? 'از علاقه‌مندی‌ها حذف شد' : 'به علاقه‌مندی‌ها اضافه شد'); return has ? o.filter((x) => x !== id) : [...o, id]; }), [notify]);
+  const syncCart = useCallback((fresh) => setCart((old) => old.map((x) => { const f = fresh?.[x.id]; if (!f) return x; return { ...x, price: Number.isFinite(Number(f.price)) ? Number(f.price) : x.price, stock: Number.isFinite(Number(f.stock)) ? Number(f.stock) : x.stock, name: f.name || x.name, image: f.images?.[0] || f.image || x.image }; })), []);
+  const toggleWish = useCallback((id) => { const key = String(id); setWish((o) => { const has = o.includes(key); notify(has ? 'از علاقه‌مندی‌ها حذف شد' : 'به علاقه‌مندی‌ها اضافه شد'); return has ? o.filter((x) => x !== key) : [...o, key].slice(-100); }); }, [notify]);
 
   const value = useMemo(() => ({
     ready, cart, wish, add, setQty, remove, clear, syncCart, toggleWish, notify,

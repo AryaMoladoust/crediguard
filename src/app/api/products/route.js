@@ -15,7 +15,7 @@ export async function GET(req) {
   if (cat) { if (!CATEGORY_SLUGS.includes(cat)) return Response.json({ items: [], total: 0 }); filter.category = cat; }
   const q = (sp.get('q') || '').trim().slice(0, 60);
   if (q) { const r = { $regex: esc(q), $options: 'i' }; filter.$or = [{ name: r }, { brand: r }, { caption: r }]; }
-  const ids = (sp.get('ids') || '').split(',').filter((x) => mongoose.isValidObjectId(x)).slice(0, 40);
+  const ids = (sp.get('ids') || '').split(',').filter((x) => mongoose.isValidObjectId(x)).slice(0, 100);
   if (sp.get('ids') !== null) filter._id = { $in: ids };
   const min = toInt(sp.get('min') ?? '', 0, 1e11), max = toInt(sp.get('max') ?? '', 0, 1e11);
   if (min !== null || max !== null) filter.price = { ...(min !== null && { $gte: min }), ...(max !== null && { $lte: max }) };

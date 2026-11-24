@@ -37,9 +37,9 @@ export default function CheckoutForm() {
       const res = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customer: { name: f.name, phone: f.phone, address: f.address }, note: f.note, method, items: cart.map((x) => ({ productId: x.id, qty: x.qty })) }) });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error || 'ثبت سفارش انجام نشد');
-      clear();
-      try { sessionStorage.removeItem(DRAFT); } catch {}
-      router.push(d.payUrl || `/order/success?code=${d.code}&method=${method}`); // نقدی ← درگاه پرداخت
+      // در خرید نقدی، سبد تا تأیید موفق پرداخت حفظ می‌شود؛ در اقساطی ثبت درخواست کافی است.
+      if (method === 'installment') { clear(); try { sessionStorage.removeItem(DRAFT); } catch {} }
+      router.push(d.payUrl || `/order/success?code=${d.code}&method=${method}`);
     } catch (x) { setErr(x.message); setBusy(false); }
   }
 

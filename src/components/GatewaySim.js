@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, TriangleAlert } from 'lucide-react';
 import { SITE } from '@/lib/site';
+import { useStore } from './store';
 
 // شبیه‌ساز درگاه پرداخت: به بانک واقعی وصل نیست و اطلاعات کارت دریافت/ذخیره نمی‌کند.
 export default function GatewaySim({ token, code, total, expiresAt }) {
   const router = useRouter();
+  const { clear } = useStore();
   const [left, setLeft] = useState(null); // در سرور null تا hydration ناسازگار نشود
   const [busy, setBusy] = useState('');
   const [failed, setFailed] = useState(false);
@@ -24,6 +26,8 @@ export default function GatewaySim({ token, code, total, expiresAt }) {
       const d = await r.json().catch(() => ({}));
       if (result === 'success') {
         if (!r.ok || !d.ok) throw new Error(d.error || 'پرداخت انجام نشد');
+        clear();
+        try { sessionStorage.removeItem('mb_checkout'); } catch {}
         router.replace(`/order/success?code=${d.code}&method=cash`);
         return;
       }
