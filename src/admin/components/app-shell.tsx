@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import type React from "react";
 import { useMemo, useState } from "react";
 import {
-  Activity, AlertTriangle, Bell, Boxes, ChevronDown, ChevronLeft, CircleHelp, ClipboardList,
+  Activity, AlertTriangle, Bell, Mail, Boxes, ChevronDown, ChevronLeft, CircleHelp, ClipboardList,
   CreditCard, Gauge, Globe2, LayoutDashboard, LifeBuoy, LogOut, Menu, Moon, Plug, Search,
   Settings, ShieldCheck, ShoppingBag, Sparkles, Sun, Tag, Users, Wallet, X, Zap,
 } from "lucide-react";
@@ -14,7 +14,7 @@ import { Localize } from "@/admin/components/ui";
 const iconMap: Record<string, React.ElementType> = {
   dashboard: LayoutDashboard, sales: ShoppingBag, customers: Users, installments: CreditCard,
   risk: ShieldCheck, inventory: Boxes, users: Gauge, activity: ClipboardList, finance: Wallet,
-  integrations: Plug, notifications: Bell, subscription: Tag, settings: Settings,
+  integrations: Plug, notifications: Bell, messages: Mail, subscription: Tag, settings: Settings,
 };
 const routes = [
   { key: "dashboard", href: "/admin", icon: "dashboard" },
@@ -31,6 +31,7 @@ const routes = [
   { key: "finance", href: "/admin/finance", icon: "finance" },
   { key: "integrations", href: "/admin/integrations", icon: "integrations" },
   { key: "notifications", href: "/admin/notifications", icon: "notifications" },
+  { key: "messages", href: "/admin/messages", icon: "messages" },
   { key: "subscription", href: "/admin/subscription", icon: "subscription" },
   { key: "settings", href: "/admin/settings", icon: "settings" },
 ];

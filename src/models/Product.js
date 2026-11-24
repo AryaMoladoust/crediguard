@@ -17,9 +17,13 @@ const ProductSchema = new mongoose.Schema(
     stock: { type: Number, default: 0, min: 0 },
     minStock: { type: Number, default: 5, min: 0 }, // نقطه سفارش مجدد
     sold: { type: Number, default: 0 },
-    image: String,
+    image: String, // تصویر اصلی (= اولین تصویر گالری)
+    images: [String], // گالری تصاویر (حداکثر ۸)
     isOffer: { type: Boolean, default: false }
   },
   { timestamps: true }
 );
+ProductSchema.index({ sold: -1 });
+ProductSchema.index({ isOffer: 1 });
+ProductSchema.index({ price: 1 });
 export default mongoose.models.Product || mongoose.model('Product', ProductSchema);

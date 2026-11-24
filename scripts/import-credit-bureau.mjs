@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 const file = process.argv[2] || 'data/credit-bureau-10000.json';
 if (!file) { console.error('مسیر فایل JSON را بدهید'); process.exit(1); }
 const docs = JSON.parse(readFileSync(file, 'utf8'));
-await mongoose.connect(process.env.MONGODB_URI, { dbName: 'mobiler' });
+await mongoose.connect(process.env.MONGODB_URI, { dbName: 'mobiler_db' });
 const col = mongoose.connection.collection('credit_bureau');
 await col.deleteMany({});
 for (let i = 0; i < docs.length; i += 1000) await col.insertMany(docs.slice(i, i + 1000));

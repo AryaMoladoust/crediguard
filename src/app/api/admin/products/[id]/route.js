@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db';
 import Product from '@/models/Product';
 import { isAdmin, unauthorized, bad } from '@/lib/admin-guard';
-import { CATEGORY_SLUGS, toInt, shape, cleanImage, cleanHex } from '@/lib/catalog';
+import { CATEGORY_SLUGS, toInt, shape, cleanImages, galleryOf, cleanHex } from '@/lib/catalog';
 import { deleteUploadedImage } from '@/lib/images';
 export const dynamic = 'force-dynamic';
 
@@ -36,7 +36,12 @@ export async function PATCH(req, { params }) {
   if (b.category !== undefined) { if (!CATEGORY_SLUGS.includes(b.category)) return bad('دسته‌بندی نامعتبر'); $set.category = b.category; }
   if (b.price !== undefined) { const v = toInt(b.price, 1, 10_000_000_000); if (v === null) return bad('قیمت باید عدد صحیح بزرگ‌تر از صفر باشد'); $set.price = v; }
   if (b.oldPrice !== undefined) { const v = b.oldPrice === '' || b.oldPrice === null ? 0 : toInt(b.oldPrice, 0, 10_000_000_000); if (v === null) return bad('قیمت قبلی نامعتبر'); $set.oldPrice = v; }
-  if (b.image !== undefined) { const v = cleanImage(b.image); if (v === null) return bad('آدرس تصویر باید با / یا https:// شروع شود'); $set.image = v || `/img/${$set.category || 'product-placeholder'}.svg`; }
+  if (b.images !== undefined || b.image !== undefined) {
+    const v = cleanImages(b.images ?? (b.image ? [b.image] : []));
+    if (v === null) return bad('تصاویر نامعتبرند (حداکثر ۸ تصویر؛ آدرس باید با / یا https:// شروع شود)');
+    $set.images = v;
+    $set.image = v[0] || `/img/${$set.category || 'product-placeholder'}.svg`;
+  }
   if (b.colorName !== undefined) { const v = String(b.colorName).trim().slice(0, 40); $set.colors = v ? [v] : []; }
   if (b.hex !== undefined) { const v = cleanHex(b.hex); if (v === null) return bad('کد رنگ نامعتبر'); $set.colorHex = v; }
   if (b.minStock !== undefined) { const v = toInt(b.minStock, 0, 1_000_000); if (v === null) return bad('نقطه سفارش نامعتبر'); $set.minStock = v; }
@@ -52,11 +57,14 @@ export async function PATCH(req, { params }) {
   try {
     await connectDB();
     const filter = $inc.stock < 0 ? { _id: id, stock: { $gte: -$inc.stock } } : { _id: id };
-    const before = $set.image !== undefined ? await Product.findById(id).select('image').lean() : null;
+    const before = $set.images !== undefined ? await Product.findById(id).select('image images').lean() : null;
     const doc = await Product.findOneAndUpdate(filter, update, { new: true, runValidators: true }).lean();
     if (!doc) return bad('محصول پیدا نشد یا موجودی کافی نیست', 404);
-    // اگر تصویر آپلودیِ قبلی جایگزین شد، از دیتابیس پاک شود
-    if (before?.image && before.image !== doc.image) await deleteUploadedImage(before.image);
+    // تصاویر آپلودیِ حذف‌شده از گالری از دیتابیس پاک می‌شوند
+    if (before) {
+      const kept = new Set(galleryOf(doc));
+      await Promise.all(galleryOf(before).filter((u) => !kept.has(u)).map(deleteUploadedImage));
+    }
     return Response.json(shape(doc));
   } catch (e) {
     console.error('admin product PATCH:', e);
@@ -72,7 +80,7 @@ export async function DELETE(_req, { params }) {
     await connectDB();
     const doc = await Product.findByIdAndDelete(id).lean();
     if (!doc) return bad('محصول پیدا نشد', 404);
-    await deleteUploadedImage(doc.image);
+    await Promise.all(galleryOf(doc).map(deleteUploadedImage));
     return Response.json({ ok: true });
   } catch (e) {
     console.error('admin product DELETE:', e);

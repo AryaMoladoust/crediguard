@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import * as XLSX from "xlsx";
 import { Banknote, CheckCircle2, ChartColumn, CircleDollarSign, FileSpreadsheet, Search, Wallet, XCircle } from "lucide-react";
 import { Badge, Button, EmptyState, PageHeader, Panel, SearchInput, SelectField, StatCard, Table } from "@/admin/components/ui";
 import { fa, money } from "@/admin/lib/api";
@@ -24,14 +23,17 @@ export default function FinanceClient() {
   const pending = filtered.filter(t => t.statusKey === "pending" || t.statusKey === "confirmed").reduce((s, t) => s + t.amount, 0);
   const cancelled = filtered.filter(t => t.statusKey === "cancelled").reduce((s, t) => s + t.amount, 0);
   function exportExcel() {
-    const rows = filtered.map(t => ({ "شماره سفارش": t.id, "تاریخ": t.date, "مشتری": t.customer, "دسته کالا": t.category, "نوع پرداخت": t.type, "مبلغ (تومان)": t.amount, "وضعیت": t.status }));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Orders");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["گزارش مالی موبایلر"], ["تعداد سفارش", filtered.length], ["جمع فروش (بدون لغوشده)", total], ["تکمیل‌شده", done], ["در جریان", pending], ["لغوشده", cancelled]]), "Summary");
-    XLSX.writeFile(wb, `mobiler-finance-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    const q = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const head = ["شماره سفارش", "تاریخ", "مشتری", "دسته کالا", "نوع پرداخت", "مبلغ (تومان)", "وضعیت"];
+    const lines = [head, ...filtered.map(t => [t.id, t.date, t.customer, t.category, t.type, t.amount, t.status])];
+    lines.push([], ["جمع فروش (بدون لغوشده)", total], ["تکمیل‌شده", done], ["در جریان", pending], ["لغوشده", cancelled]);
+    const csv = "\uFEFF" + lines.map(r => r.map(q).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a"); a.href = url; a.download = `mobiler-finance-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   return <>
-    <PageHeader title="مدیریت مالی" subtitle="گردش مالی بر اساس سفارش‌های واقعی فروشگاه. پرداخت آنلاین و دریافت اقساط هنوز ثبت نمی‌شود." eyebrow="FINANCE" action={<Button icon={<FileSpreadsheet size={16}/>} onClick={exportExcel} disabled={!filtered.length}>خروجی Excel</Button>}/>
+    <PageHeader title="مدیریت مالی" subtitle="گردش مالی بر اساس سفارش‌های واقعی فروشگاه. پرداخت آنلاین و دریافت اقساط هنوز ثبت نمی‌شود." eyebrow="FINANCE" action={<Button icon={<FileSpreadsheet size={16}/>} onClick={exportExcel} disabled={!filtered.length}>خروجی CSV (قابل باز شدن در Excel)</Button>}/>
     {error && <div className="form-error">{error}</div>}
     <div className="stats-grid stats-four">
       <StatCard label="جمع فروش" value={money(total)} hint="بدون سفارش‌های لغوشده" icon={<Wallet size={18}/>} tone="blue"/>
