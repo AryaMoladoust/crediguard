@@ -22,8 +22,8 @@ export default function DashboardPage() {
   const maxW = Math.max(...weeks.map(w => w.sales), 1);
   const totalSales = weeks.reduce((s, w) => s + w.sales, 0);
   const totalIns = weeks.reduce((s, w) => s + w.installment, 0);
-  const st = stats?.statuses ?? { pending: 0, confirmed: 0, completed: 0, cancelled: 0 };
-  const stTotal = st.pending + st.confirmed + st.completed + st.cancelled;
+  const st = stats?.statuses ?? { pending: 0, confirmed: 0, shipped: 0, completed: 0, cancelled: 0 };
+  const stTotal = st.pending + st.confirmed + st.shipped + st.completed + st.cancelled;
   const today = new Intl.DateTimeFormat("fa-IR", { dateStyle: "full" }).format(new Date());
   const timeline = (ev?.orders ?? []).slice(0, 4);
   return <>
@@ -43,7 +43,7 @@ export default function DashboardPage() {
       </Panel>
       <Panel title="وضعیت سفارش‌ها" subtitle="توزیع همه‌ی سفارش‌های ثبت‌شده">
         <div className="inventory-states" style={{ padding: "6px 0" }}>
-          {([["pending", "در انتظار", "amber"], ["confirmed", "تأییدشده", "blue"], ["completed", "تکمیل‌شده", "green"], ["cancelled", "لغوشده", "red"]] as const).map(([k, l, c]) => <div key={k}><div><span>{l}</span><b>{fa(st[k])} سفارش</b></div><Progress value={stTotal ? (st[k] / stTotal) * 100 : 0} color={c}/></div>)}
+          {([["pending", "در انتظار", "amber"], ["confirmed", "تأییدشده", "blue"], ["shipped", "ارسال‌شده", "violet"], ["completed", "تکمیل‌شده", "green"], ["cancelled", "لغوشده", "red"]] as const).map(([k, l, c]) => <div key={k}><div><span>{l}</span><b>{fa(st[k])} سفارش</b></div><Progress value={stTotal ? (st[k] / stTotal) * 100 : 0} color={c}/></div>)}
         </div>
         <div className="risk-note"><Users size={15}/><span>مشتریان از روی سفارش‌ها ساخته می‌شوند.</span><Link href="/admin/customers">مشاهده</Link></div>
       </Panel>

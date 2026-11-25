@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Check, PackageSearch } from 'lucide-react';
 import { ORDER_STATUS, METHOD_LABEL, fmtDate } from '@/lib/format';
 
-const STEPS = ['ثبت سفارش', 'تأیید شده', 'تحویل شده'];
+const STEPS = ['ثبت سفارش', 'تأیید شده', 'ارسال شده', 'تحویل شده'];
 
 export default function TrackForm({ initialCode = '' }) {
   const [code, setCode] = useState(initialCode);
@@ -31,7 +31,7 @@ export default function TrackForm({ initialCode = '' }) {
         <div className="card mt-5 space-y-5 p-5 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-2"><div><small className="text-ink-500">کد سفارش</small><b className="block text-lg">{o.code}</b></div><span className={`rounded-full px-3 py-1 text-sm font-bold ${o.status === 'cancelled' ? 'bg-red-50 text-red-700' : 'bg-brand-50 text-brand-700'}`}>{st.label}</span></div>
           {o.status !== 'cancelled' && (
-            <ol className="grid grid-cols-3 gap-2" aria-label="مراحل سفارش">{STEPS.map((s, i) => (
+            <ol className="grid grid-cols-4 gap-2" aria-label="مراحل سفارش">{STEPS.map((s, i) => (
               <li key={s} className="text-center"><span className={`mx-auto mb-1.5 grid size-9 place-items-center rounded-full text-sm font-bold ${i <= st.step ? 'bg-brand text-white' : 'bg-ink-100 text-ink-400'}`}>{i <= st.step ? <Check size={17} /> : (i + 1).toLocaleString('fa-IR')}</span><span className={`text-xs font-semibold ${i <= st.step ? 'text-ink' : 'text-ink-400'}`}>{s}</span></li>))}</ol>
           )}
           <ul className="divide-y divide-ink-100 text-sm">{o.items.map((i, k) => <li key={k} className="flex justify-between gap-3 py-2.5"><span>{i.name} <span className="text-ink-500">× {i.qty.toLocaleString('fa-IR')}</span></span><b>{(i.price * i.qty).toLocaleString('fa-IR')}</b></li>)}</ul>

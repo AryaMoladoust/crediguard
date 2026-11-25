@@ -3,7 +3,7 @@ export default {
   poweredByHeader: false,
   // صفحه اصلی فروشگاه در /shop قرار دارد (دورزدن باگ Next با page ریشه داخل route group)
   async rewrites() { return [{ source: '/', destination: '/shop' }]; },
-  async redirects() { return [{ source: '/shop', destination: '/', permanent: false }]; },
+  async redirects() { return [{ source: '/shop', destination: '/', permanent: false }, { source: '/admin/users', destination: '/admin/admins', permanent: true }]; },
   async headers() {
     return [{ source: '/:path*', headers: [
       { key: 'X-Content-Type-Options', value: 'nosniff' },

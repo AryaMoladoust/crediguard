@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowRight, MapPin, Phone } from "lucide-react";
 import { Avatar, Badge, Button, EmptyState, PageHeader, Panel, StatCard, Table } from "@/admin/components/ui";
@@ -25,7 +26,7 @@ export default function CustomerProfilePage() {
       <p className="muted-cell"><MapPin size={13}/> {c.address || "—"}</p>
     </Panel>
     <Panel title="سفارش‌های مشتری" subtitle={`${fa(orders.length)} سفارش`}>
-      <Table empty="سفارشی نیست" headers={["شماره سفارش", "محصول", "تاریخ", "مبلغ (تومان)", "روش", "وضعیت"]} rows={orders.map(o => [<b className="mono link-text">{o.code}</b>, o.product, jDate(o.createdAt), fa(o.total), METHOD[o.method], <Badge tone={statusTone(o.status)}>{ORDER_STATUS[o.status]}</Badge>])}/>
+      <Table empty="سفارشی نیست" headers={["شماره سفارش", "محصول", "تاریخ", "مبلغ (تومان)", "روش", "وضعیت"]} rows={orders.map(o => [<Link className="mono link-text" href={`/admin/sales/${o.id}`}><b>{o.code}</b></Link>, o.product, jDate(o.createdAt), fa(o.total), METHOD[o.method], <Badge tone={statusTone(o.status)}>{ORDER_STATUS[o.status]}</Badge>])}/>
     </Panel>
   </>;
 }

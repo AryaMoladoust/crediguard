@@ -12,7 +12,8 @@ export const ORDER_STATUS = {
   awaiting_payment: { label: 'در انتظار پرداخت', step: 0 },
   pending: { label: 'در انتظار تأیید', step: 0 },
   confirmed: { label: 'تأیید شده', step: 1 },
-  completed: { label: 'تحویل شده', step: 2 },
+  shipped: { label: 'ارسال شده', step: 2 },
+  completed: { label: 'تحویل شده', step: 3 },
   cancelled: { label: 'لغو شده', step: -1 }
 };
 export const METHOD_LABEL = { cash: 'پرداخت نقدی', installment: 'درخواست اقساطی' };

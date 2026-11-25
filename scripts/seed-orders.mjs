@@ -16,7 +16,7 @@ const products = await Product.find().limit(40).lean();
 if (!products.length) { console.error('ابتدا محصولات را ثبت کنید: npm run seed'); process.exit(1); }
 
 const people = [['سارا احمدی', '09123456789'], ['مهدی کریمی', '09125521020'], ['رضا نوری', '09354408172'], ['نگار محمدی', '09102214055'], ['علی رضایی', '09153339210'], ['الهام عباسی', '09367289100']];
-const statuses = ['pending', 'confirmed', 'completed', 'completed', 'pending', 'cancelled'];
+const statuses = ['pending', 'confirmed', 'shipped', 'completed', 'pending', 'cancelled'];
 const docs = Array.from({ length: 12 }, (_, i) => {
   const [name, phone] = people[i % people.length];
   const p = products[(i * 7) % products.length];

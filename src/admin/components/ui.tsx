@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { ArrowDownRight, ArrowUpLeft, ChevronLeft, ChevronRight, MoreHorizontal, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search } from "lucide-react";
 import React from "react";
 import { useAppSettings } from "@/admin/components/providers";
 import { englishText } from "@/admin/lib/i18n";
@@ -56,7 +56,7 @@ export function Avatar({ name, size = "md", tone = "blue" }: { name: string; siz
   const { locale } = useAppSettings();
   const displayName = localizeNode(name, locale) as string;
   const parts = displayName.trim().split(" ").filter(Boolean);
-  const initials = parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : (parts[0]?.slice(0, 2) || "CY");
+  const initials = parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : (parts[0]?.slice(0, 2) || "؟");
   return <span className={`avatar avatar-${size} avatar-${tone}`}>{initials}</span>;
 }
 export function Table({ headers, rows, empty = "موردی برای نمایش وجود ندارد" }: { headers: string[]; rows: React.ReactNode[][]; empty?: string }) {
@@ -71,10 +71,6 @@ export function SelectField({ value, onChange, options, label }: { value: string
   const { locale } = useAppSettings();
   return <label className="select-field">{label && <span>{localizeNode(label, locale)}</span>}<select value={value} onChange={e => onChange(e.target.value)}>{options.map(o => <option key={o.value} value={o.value}>{localizeNode(o.label, locale)}</option>)}</select></label>;
 }
-export function Segmented({ value, onChange, options }: { value: string; onChange: (value: string) => void; options: { label: string; value: string }[] }) {
-  const { locale } = useAppSettings();
-  return <div className="segmented">{options.map(o => <button key={o.value} onClick={() => onChange(o.value)} className={value === o.value ? "selected" : ""}>{localizeNode(o.label, locale)}</button>)}</div>;
-}
 export function Progress({ value, color = "blue" }: { value: number; color?: string }) {
   return <div className="progress-track"><span className={`progress-fill progress-${color}`} style={{ width: `${Math.max(0, Math.min(100, value))}%` }}/></div>;
 }
@@ -82,11 +78,22 @@ export function EmptyState({ title, desc, action }: { title: string; desc?: stri
   const { locale } = useAppSettings();
   return <div className="empty-state"><div className="empty-orb"><Search size={23}/></div><h3>{localizeNode(title, locale)}</h3>{desc && <p>{localizeNode(desc, locale)}</p>}{localizeNode(action, locale)}</div>;
 }
-export function TrendBars({ values, labels }: { values: number[]; labels: string[] }) {
-  const max = Math.max(...values, 1);
-  return <div className="trend-chart">{values.map((v, i) => <div className="trend-column" key={labels[i]}><div className="trend-bar" style={{ height: `${(v / max) * 100}%` }}><span>{v}</span></div><small>{labels[i]}</small></div>)}</div>;
-}
 export function MiniLink({ href, children }: { href: string; children: React.ReactNode }) { const { locale } = useAppSettings(); return <Link className="mini-link" href={href}>{localizeNode(children, locale)}<ChevronLeft size={14}/></Link>; }
-export function TableMore() { return <button className="icon-button" aria-label="گزینه‌های بیشتر"><MoreHorizontal size={17}/></button>; }
-export function Delta({ children, down = false }: { children: React.ReactNode; down?: boolean }) { return <span className={`delta ${down ? "down" : "up"}`}>{down ? <ArrowDownRight size={13}/> : <ArrowUpLeft size={13}/>} {children}</span>; }
-export function Pagination({ page = 1, total = 5 }: { page?: number; total?: number }) { return <div className="pagination"><span>صفحه {page} از {total}</span><div><button disabled={page <= 1}><ChevronRight size={15}/></button><button><ChevronLeft size={15}/></button></div></div>; }
+// صفحه‌بندی واقعی: خود صفحه را سرور می‌دهد، اینجا فقط ناوبری است
+export function Pagination({ page, pages, total, pageSize, onPage }: { page: number; pages: number; total: number; pageSize: number; onPage: (page: number) => void }) {
+  if (total <= 0) return null;
+  const from = (page - 1) * pageSize + 1, to = Math.min(total, page * pageSize);
+  const fa = (n: number) => n.toLocaleString("fa-IR");
+  const start = Math.max(1, Math.min(page - 2, pages - 4)), end = Math.min(pages, start + 4);
+  const nums = Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  return <div className="pagination">
+    <span>نمایش {fa(from)} تا {fa(to)} از {fa(total)} · صفحه {fa(page)} از {fa(pages)}</span>
+    <div>
+      <button aria-label="صفحه‌ی اول" disabled={page <= 1} onClick={() => onPage(1)}><ChevronsRight size={14}/></button>
+      <button aria-label="صفحه‌ی قبل" disabled={page <= 1} onClick={() => onPage(page - 1)}><ChevronRight size={15}/></button>
+      {nums.map(n => <button key={n} className={n === page ? "current" : ""} aria-current={n === page ? "page" : undefined} onClick={() => onPage(n)}>{fa(n)}</button>)}
+      <button aria-label="صفحه‌ی بعد" disabled={page >= pages} onClick={() => onPage(page + 1)}><ChevronLeft size={15}/></button>
+      <button aria-label="صفحه‌ی آخر" disabled={page >= pages} onClick={() => onPage(pages)}><ChevronsLeft size={14}/></button>
+    </div>
+  </div>;
+}
