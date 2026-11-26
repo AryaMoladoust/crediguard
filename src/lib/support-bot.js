@@ -1,4 +1,4 @@
-import { POLICY, RISK_LABEL } from './credit-policy';
+import { POLICY, RISK_LABEL } from './credit-policy.js';
 // پاسخ‌گوی خودکار پشتیبانی: فقط از «تنظیمات واقعی سیستم» و «داده‌ی واقعی خود مشتری» پاسخ می‌دهد.
 // اگر مطمئن نباشد (یا موضوع نیازمند تصمیم انسانی باشد) مکالمه را به پشتیبان انسانی ارجاع می‌دهد.
 const norm = (s) => String(s || '').replace(/[ي]/g, 'ی').replace(/[ك]/g, 'ک').replace(/[\u200c\u064b-\u0652]/g, ' ').replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/\s+/g, ' ').toLowerCase();

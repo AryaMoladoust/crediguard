@@ -10,14 +10,37 @@ export async function issueOtp(phone, purpose) {
   const code = randomCode();
   await sendSms(phone, `کد تأیید اعتبار یار: ${code}`);
   await PhoneOtp.findOneAndUpdate({ phone, purpose }, { codeHash: h(phone, purpose, code), attempts: 0, lastSentAt: new Date(), expiresAt: new Date(Date.now() + TTL) }, { upsert: true });
-  return { ok: true, expiresIn: TTL / 1000, ...(otpSimulatorOn() && { devCode: code }) };
+  // هرگز کد OTP را در پاسخ API محیط production افشا نکن؛ حتی اگر شبیه‌ساز صریحاً روشن باشد.
+  const exposeDevCode = process.env.NODE_ENV !== 'production' && otpSimulatorOn();
+  return { ok: true, expiresIn: TTL / 1000, ...(exposeDevCode && { devCode: code }) };
 }
-// true = معتبر و مصرف شد
+// true = معتبر و مصرف شد؛ حذف اتمیک مانع مصرف هم‌زمان یک کد در چند درخواست می‌شود.
 export async function consumeOtp(phone, purpose, code) {
-  const d = await PhoneOtp.findOne({ phone, purpose });
-  if (!d || d.expiresAt < new Date() || d.attempts >= MAX_ATTEMPTS) return false;
-  const a = Buffer.from(h(phone, purpose, String(code ?? '').trim())), b = Buffer.from(d.codeHash);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) { await PhoneOtp.updateOne({ _id: d._id }, { $inc: { attempts: 1 } }); return false; }
-  await PhoneOtp.deleteOne({ _id: d._id });
-  return true;
+  const now = new Date();
+  const codeHash = h(phone, purpose, String(code ?? '').trim());
+
+  // فقط یک درخواست می‌تواند سند منطبق را حذف و کد را مصرف کند.
+  const consumed = await PhoneOtp.findOneAndDelete({
+    phone,
+    purpose,
+    codeHash,
+    expiresAt: { $gt: now },
+    attempts: { $lt: MAX_ATTEMPTS }
+  });
+  if (consumed) return true;
+
+  // کد اشتباه، منقضی یا تمام‌شده معتبر نیست؛ تلاش ناموفق فقط روی OTP فعال شمرده می‌شود.
+  const current = await PhoneOtp.findOne({
+    phone,
+    purpose,
+    expiresAt: { $gt: now },
+    attempts: { $lt: MAX_ATTEMPTS }
+  }).select('_id').lean();
+  if (current) {
+    await PhoneOtp.updateOne(
+      { _id: current._id, expiresAt: { $gt: now }, attempts: { $lt: MAX_ATTEMPTS } },
+      { $inc: { attempts: 1 } }
+    );
+  }
+  return false;
 }

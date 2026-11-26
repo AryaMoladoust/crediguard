@@ -15,7 +15,9 @@
     "import:bureau": "node --env-file=.env.local scripts/import-credit-bureau.mjs",
     "lint": "next lint",
     "seed:demo": "node --env-file=.env.local scripts/seed-demo.mjs",
-    "test:credit": "node scripts/test-credit-engine.mjs"
+    "test:credit": "node scripts/test-credit-engine.mjs",
+    "test:domain": "node scripts/test-domain.mjs",
+    "test": "npm run test:credit && npm run test:domain"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

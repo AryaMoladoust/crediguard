@@ -9,6 +9,8 @@ const Msg = new mongoose.Schema({
 const S = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
   synthetic: { type: Boolean, default: false },
+  // شناسه‌ی پیام فرم تماس قدیمی؛ مانع تبدیل تکراری در اجرای هم‌زمان مهاجرت
+  legacyContactId: { type: mongoose.Schema.Types.ObjectId, unique: true, sparse: true },
   guest: { name: String, phone: { type: String, index: true } }, // پیام فرم تماس بدون ورود
   status: { type: String, enum: ['bot_answered', 'waiting_admin', 'answered', 'closed'], default: 'bot_answered', index: true },
   handoff: { type: Boolean, default: false }, // از این پس پاسخ‌گو انسان است

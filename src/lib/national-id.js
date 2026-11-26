@@ -1,5 +1,5 @@
 import { createHmac } from 'node:crypto';
-import { toLatinDigits } from './catalog';
+import { toLatinDigits } from './catalog.js';
 
 // اعتبارسنجی کد ملی ایران (۱۰ رقم + رقم کنترل)
 export function normalizeNationalId(v) { return toLatinDigits(v).replace(/\s|-/g, ''); }
