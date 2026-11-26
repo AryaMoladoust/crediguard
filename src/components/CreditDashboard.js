@@ -13,18 +13,10 @@ const Pill = ({ c, children }) => <span className={`rounded-full px-3 py-1 text-
 const SimBadge = () => <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-bold text-violet-700"><FlaskConical size={12} />داده آزمایشی (شبیه‌سازی‌شده)</span>;
 
 function CompleteProfile({ onDone }) {
-  const [f, setF] = useState({ nationalId: '', otp: '' });
-  const [otp, setOtp] = useState({ sent: false, busy: false, devCode: '' });
+  const [f, setF] = useState({ nationalId: '' });
   const [st, setSt] = useState({ busy: false, err: '' });
-  async function send() {
-    setOtp((o) => ({ ...o, busy: true })); setSt({ busy: false, err: '' });
-    const r = await fetch('/api/auth/otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ purpose: 'verify' }) });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok) { setSt({ busy: false, err: d.error || 'ارسال کد انجام نشد' }); setOtp((o) => ({ ...o, busy: false })); return; }
-    setOtp({ sent: true, busy: false, devCode: d.devCode || '' });
-  }
   async function submit(e) {
-    e.preventDefault(); if (!otp.sent) return send();
+    e.preventDefault();
     setSt({ busy: true, err: '' });
     const r = await fetch('/api/auth/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(f) });
     const d = await r.json().catch(() => ({}));
@@ -34,12 +26,10 @@ function CompleteProfile({ onDone }) {
   return (
     <form onSubmit={submit} className="card space-y-4 p-5 sm:p-6">
       <h2 className="text-lg">تکمیل پرونده‌ی اعتباری</h2>
-      <p className="text-sm text-ink-500">برای خرید اقساطی، کد ملی و تأیید شماره موبایل لازم است. کد ملی فقط به‌صورت رمزنگاری‌شده و ماسک‌شده نگهداری می‌شود.</p>
+      <p className="text-sm text-ink-500">برای خرید اقساطی، کد ملی لازم است. کد ملی فقط به‌صورت رمزنگاری‌شده و ماسک‌شده نگهداری می‌شود.</p>
       <label className="field">کد ملی<input className="input" dir="ltr" style={{ textAlign: 'right' }} required inputMode="numeric" maxLength={10} value={f.nationalId} onChange={(e) => setF({ ...f, nationalId: e.target.value })} /></label>
-      {otp.sent && <label className="field">کد تأیید پیامک‌شده<input className="input" dir="ltr" style={{ textAlign: 'right' }} required inputMode="numeric" maxLength={5} value={f.otp} onChange={(e) => setF({ ...f, otp: e.target.value })} />
-        {otp.devCode && <small className="mt-1 block font-semibold text-brand-700">حالت آزمایشی؛ کد شما: <b dir="ltr">{otp.devCode}</b></small>}</label>}
       {st.err && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{st.err}</p>}
-      <button className="btn btn-primary w-full" disabled={st.busy || otp.busy}>{otp.sent ? 'تأیید و ثبت' : 'ارسال کد تأیید'}</button>
+      <button className="btn btn-primary w-full" disabled={st.busy}>{st.busy ? 'لطفاً صبر کنید...' : 'ثبت'}</button>
     </form>
   );
 }

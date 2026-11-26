@@ -48,3 +48,34 @@ export const FIELD_LABEL = {
   onTimePayments: 'اقساط به‌موقع', latePayments: 'اقساط با تأخیر', recentInquiries: 'استعلام ۶ماهه', accountAgeMonths: 'عمر حساب (ماه)',
   everDefaulted: 'سابقه‌ی نکول', blacklisted: 'فهرست سیاه', hasChequebook: 'دسته‌چک دارد', goodStandingPct: 'خوش‌حسابی (٪)'
 };
+
+// ---- رکورد «مثل بانک مرکزی»: هم‌شکل با خروجی اسکریپت scripts/gen_credit_bureau.py، کاملاً مصنوعی و تصادفی.
+// اعداد مالی از همان data موتور اعتبارسنجی گرفته می‌شود تا دو نسخه با هم ناسازگار نباشند؛ فقط اطلاعات هویتی/جغرافیایی تصادفی اضافه می‌شود.
+const EMPLOYMENT = ['کارمند', 'آزاد', 'کارگر', 'بازنشسته', 'دانشجو', 'شغل‌دار-خصوصی'];
+const PLACES = {
+  'تهران': ['تهران', 'شهریار', 'ری', 'اسلامشهر'], 'اصفهان': ['اصفهان', 'کاشان', 'نجف‌آباد'], 'خراسان رضوی': ['مشهد', 'نیشابور', 'سبزوار'],
+  'فارس': ['شیراز', 'مرودشت', 'جهرم'], 'آذربایجان شرقی': ['تبریز', 'مراغه'], 'خوزستان': ['اهواز', 'دزفول', 'آبادان'],
+  'البرز': ['کرج', 'فردیس'], 'مازندران': ['ساری', 'بابل', 'آمل'], 'گیلان': ['رشت', 'انزلی'], 'کرمانشاه': ['کرمانشاه'], 'یزد': ['یزد'],
+  'کرمان': ['کرمان', 'رفسنجان'], 'همدان': ['همدان'], 'قم': ['قم'], 'هرمزگان': ['بندرعباس'], 'اردبیل': ['اردبیل']
+};
+const STREETS = ['ولیعصر', 'بهار', 'شهید بهشتی', 'امام خمینی', 'آزادی', 'انقلاب', 'سعدی', 'فردوسی', 'مطهری', 'ملاصدرا', 'کارگر', 'گلستان'];
+
+export function generateBureauRecord(userId, { fullName = '', mobile = '', data } = {}, version = SIM_VERSION) {
+  const d = data || generateCreditData(userId, version);
+  const R = rng(`bureau-demo:v${version}:${userId}`);
+  const int = (a, b) => a + Math.floor(R() * (b - a + 1));
+  const pick = (arr) => arr[int(0, arr.length - 1)];
+  const province = pick(Object.keys(PLACES)); const city = pick(PLACES[province]);
+  const chequeScore = d.hasChequebook ? Math.max(1, Math.min(100, Math.round(100 - d.bouncedCheques * 13 - int(0, 15) - (d.goodStandingPct < 70 ? 20 : 0)))) : null;
+  return {
+    mobile, fullName,
+    birthYearJalali: int(1350, 1385), employment: pick(EMPLOYMENT), province, city,
+    address: `${city}، خیابان ${pick(STREETS)}، کوچه ${int(1, 40)}، پلاک ${int(1, 120)}`,
+    declaredMonthlyIncome: d.monthlyIncome, accountAgeMonths: d.accountAgeMonths,
+    avgAccountBalance6m: d.accountBalance, recentInquiries6m: d.recentInquiries,
+    blacklisted: d.blacklisted,
+    loans: { activeLoans: d.activeLoans, monthlyObligations: d.monthlyObligations, overdueInstallments: d.overdueInstallments, maxDelayDays: d.maxDelayDays, everDefaulted: d.everDefaulted },
+    cheque: { hasChequebook: d.hasChequebook, bouncedLast5y: d.bouncedCheques, chequeScore },
+    synthetic: true
+  };
+}

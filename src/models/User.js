@@ -9,8 +9,6 @@ const UserSchema = new mongoose.Schema(
     // کد ملی فقط به‌صورت HMAC (یکتا بودن) و نسخه‌ی ماسک‌شده نگهداری می‌شود
     nationalIdHash: { type: String, unique: true, sparse: true },
     nationalIdMasked: String,
-    phoneVerified: { type: Boolean, default: false },
-    phoneVerifiedAt: Date,
     synthetic: { type: Boolean, default: false },
     passwordChangedAt: Date
   },

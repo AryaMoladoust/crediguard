@@ -6,7 +6,7 @@ import { SIM_NOTICE } from './credit-policy';
 export async function customerCredit(user, { assess = true } = {}) {
   const orders = await Order.find({ $or: [{ user: user.id }, { 'customer.phone': user.phone, user: { $exists: false } }], status: { $ne: 'awaiting_payment' } }).sort({ createdAt: -1 }).limit(50).lean();
   const installments = summarizeInstallments(orders);
-  const ready = !!(user.nationalIdMasked && user.phoneVerified);
+  const ready = !!user.nationalIdMasked;
   if (!ready || !assess) return { ready, installments, orders };
   const { profile, assessment } = await runAssessment(user.id, 'customer');
   return { ready, installments, orders, profile, assessment, notice: SIM_NOTICE };

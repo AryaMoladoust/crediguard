@@ -16,7 +16,7 @@ async function handle(req) {
     const c = await customerCredit(u);
     const d = c.profile?.data;
     return Response.json({
-      ready: c.ready, user: { name: u.name, phone: u.phone, nationalId: u.nationalIdMasked, phoneVerified: u.phoneVerified },
+      ready: c.ready, user: { name: u.name, phone: u.phone, nationalId: u.nationalIdMasked },
       notice: SIM_NOTICE, policy: { months: POLICY.monthOptions, downPct: POLICY.downPaymentOptions },
       profile: d && { synthetic: true, simulated: d, decision: c.profile.decision?.status || 'auto', decisionNote: c.profile.decision?.status !== 'auto' ? c.profile.decision?.note || '' : '' },
       assessment: publicAssessment(c.assessment),

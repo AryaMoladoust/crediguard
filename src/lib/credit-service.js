@@ -1,15 +1,24 @@
 import { createHash } from 'node:crypto';
 import CreditProfile from '@/models/CreditProfile';
+import User from '@/models/User';
 import CreditAssessment from '@/models/CreditAssessment';
-import { generateCreditData, SIM_VERSION, EDITABLE, EDITABLE_BOOL } from './credit-sim';
+import { generateCreditData, generateBureauRecord, SIM_VERSION, EDITABLE, EDITABLE_BOOL } from './credit-sim';
 import { analyzeCredit } from './credit-agent';
 import { POLICY, planOf } from './credit-policy';
 
 // پروفایل آزمایشی مشتری؛ اگر نبود با شبیه‌ساز قطعی (از روی شناسه‌ی داخلی) ساخته و ذخیره می‌شود
 export async function ensureProfile(userId) {
   let p = await CreditProfile.findOne({ user: userId });
-  if (p) return p;
-  try { p = await CreditProfile.create({ user: userId, simVersion: SIM_VERSION, data: generateCreditData(String(userId)) }); }
+  if (p?.bureau) return p;
+  const u = await User.findById(userId).select('name phone address').lean();
+  if (p) { // پروفایل قدیمی بدون snapshot بانکی: فقط snapshot اضافه می‌شود، data و تصمیم مدیر دست‌نخورده می‌ماند
+    p.bureau = generateBureauRecord(String(userId), { fullName: u?.name, mobile: u?.phone, data: p.data });
+    await p.save();
+    return p;
+  }
+  const data = generateCreditData(String(userId));
+  const bureau = generateBureauRecord(String(userId), { fullName: u?.name, mobile: u?.phone, data });
+  try { p = await CreditProfile.create({ user: userId, simVersion: SIM_VERSION, data, bureau }); }
   catch (e) { if (e?.code === 11000) p = await CreditProfile.findOne({ user: userId }); else throw e; }
   return p;
 }

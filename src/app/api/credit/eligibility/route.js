@@ -10,7 +10,7 @@ export async function POST(req) {
   if (!(await rateLimit(req, 'elig', 60, 10 * 60_000))) return tooMany();
   const u = await getUser();
   if (!u) return Response.json({ error: 'برای خرید اقساطی وارد حساب شوید' }, { status: 401 });
-  if (!u.nationalIdMasked || !u.phoneVerified) return Response.json({ error: 'پرونده‌ی اعتباری ناقص است: کد ملی و تأیید موبایل را در «اعتبار و اقساط» تکمیل کنید', needsProfile: true }, { status: 403 });
+  if (!u.nationalIdMasked) return Response.json({ error: 'پرونده‌ی اعتباری ناقص است: کد ملی را در «اعتبار و اقساط» تکمیل کنید', needsProfile: true }, { status: 403 });
   let b; try { b = await req.json(); } catch { return Response.json({ error: 'درخواست نامعتبر' }, { status: 400 }); }
   const total = Number(b?.total), months = Number(b?.months), downPct = Number(b?.downPct);
   if (!Number.isFinite(total) || total <= 0 || total > 5e9) return Response.json({ error: 'مبلغ نامعتبر' }, { status: 400 });

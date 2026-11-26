@@ -8,7 +8,7 @@ import { DEC, REC, RISK, METHOD, ORDER_STATUS, fa, jDate, jDateTime, statusTone,
 
 type D = {
   notice: string;
-  user: { id: string; name: string; phone: string; email: string; nationalId: string; phoneVerified: boolean };
+  user: { id: string; name: string; phone: string; email: string; nationalId: string };
   profile: { data: Record<string, number | boolean>; decision: string; decisionNote: string; decisionBy: string; decisionAt: string | null; adjustments: { at: string; by: string; reason: string; changes: Record<string, unknown> }[] };
   assessment: { score: number; riskLevel: string; creditLimit: number; recommendation: string; summary: string; reasons: { label: string; delta: number }[]; flags: { code: string; severity: string; text: string }[]; metrics: { dti: number; monthlyCapacity: number }; engine: string; at: string };
   history: { score: number; riskLevel: string; creditLimit: number; recommendation: string; trigger: string; at: string }[];
@@ -81,8 +81,7 @@ export default function RiskDetailPage() {
         </Panel>
         <Panel title="خلاصه‌ی مالی (آزمایشی)">
           <dl className="kv-list"><div><dt>نسبت تعهدات به درآمد</dt><dd>{fa(a.metrics.dti * 100)}٪</dd></div><div><dt>ظرفیت قسط ماهانه</dt><dd>{fa(a.metrics.monthlyCapacity)} تومان</dd></div><div><dt>خوش‌حسابی</dt><dd>{fa(Number(p.goodStandingPct))}٪</dd></div>
-            <div><dt>اقساط معوق (سفارش‌ها)</dt><dd>{d.installments.overdueCount ? `${fa(d.installments.overdueCount)} قسط · ${fa(d.installments.overdueAmount)} تومان` : "ندارد"}</dd></div>
-            <div><dt>موبایل تأییدشده</dt><dd>{d.user.phoneVerified ? "بله" : "خیر"}</dd></div></dl>
+            <div><dt>اقساط معوق (سفارش‌ها)</dt><dd>{d.installments.overdueCount ? `${fa(d.installments.overdueCount)} قسط · ${fa(d.installments.overdueAmount)} تومان` : "ندارد"}</dd></div></dl>
         </Panel>
         <Panel title="سابقه‌ی تحلیل‌ها"><Table empty="—" headers={["تاریخ", "امتیاز", "سقف", "پیشنهاد"]} rows={d.history.map(h => [jDate(h.at), fa(h.score), fa(h.creditLimit), REC[h.recommendation][0]])}/></Panel>
       </div>

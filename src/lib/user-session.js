@@ -10,10 +10,10 @@ export async function getUser() {
     const s = await verifyUserSession(jar.get(USER_COOKIE)?.value, process.env.SESSION_SECRET);
     if (!s) return null;
     await connectDB();
-    const u = await User.findById(s.uid).select('name phone email address nationalIdMasked phoneVerified passwordChangedAt').lean();
+    const u = await User.findById(s.uid).select('name phone email address nationalIdMasked passwordChangedAt').lean();
     if (!u) return null;
     if (u.passwordChangedAt && u.passwordChangedAt.getTime() / 1000 > s.iat + 1) return null; // نشست قبل از تغییر رمز
-    return { id: String(u._id), name: u.name, phone: u.phone, email: u.email || '', address: u.address || '', nationalIdMasked: u.nationalIdMasked || '', phoneVerified: !!u.phoneVerified };
+    return { id: String(u._id), name: u.name, phone: u.phone, email: u.email || '', address: u.address || '', nationalIdMasked: u.nationalIdMasked || '' };
   } catch { return null; }
 }
 

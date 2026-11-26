@@ -3,7 +3,6 @@ import User from '@/models/User';
 import { getUser } from '@/lib/user-session';
 import { rateLimit, tooMany } from '@/lib/rate-limit';
 import { isValidNationalId, normalizeNationalId, hashNationalId, maskNationalId } from '@/lib/national-id';
-import { consumeOtp } from '@/lib/otp';
 import { runAssessment } from '@/lib/credit-service';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -23,7 +22,7 @@ export async function PATCH(req) {
   await connectDB();
   const set = { name, address, email: email || undefined };
 
-  // تکمیل پرونده‌ی اعتباری برای حساب‌های قدیمی: کد ملی (یک‌بار، غیرقابل تغییر توسط مشتری) + تأیید موبایل
+  // تکمیل پرونده‌ی اعتباری برای حساب‌های قدیمی: کد ملی (یک‌بار، غیرقابل تغییر توسط مشتری)
   if (b?.nationalId) {
     if (!(await rateLimit(req, 'nid', 10, 60 * 60_000))) return tooMany();
     if (u.nationalIdMasked) return err('کد ملی قبلاً ثبت شده و فقط با پشتیبانی قابل تغییر است');
@@ -31,8 +30,7 @@ export async function PATCH(req) {
     if (!isValidNationalId(nid)) return err('کد ملی نامعتبر است');
     const hash = hashNationalId(nid);
     if (await User.exists({ nationalIdHash: hash, _id: { $ne: u.id } })) return err('این کد ملی برای حساب دیگری ثبت شده است', 409);
-    if (!u.phoneVerified && !(await consumeOtp(u.phone, 'verify', b?.otp))) return err('کد تأیید اشتباه یا منقضی شده است');
-    Object.assign(set, { nationalIdHash: hash, nationalIdMasked: maskNationalId(nid), phoneVerified: true, phoneVerifiedAt: new Date() });
+    Object.assign(set, { nationalIdHash: hash, nationalIdMasked: maskNationalId(nid) });
   }
   try { await User.updateOne({ _id: u.id }, { $set: set, ...(email ? {} : { $unset: { email: 1 } }) }); }
   catch (e) { if (e?.code === 11000) return err('این کد ملی برای حساب دیگری ثبت شده است', 409); throw e; }

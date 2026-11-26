@@ -49,7 +49,7 @@ try {
       user = await User.create({
         name: names[i], phone, email: `demo${i + 1}@example.invalid`,
         passwordHash, nationalIdHash: hashNationalId(rawNid), nationalIdMasked: maskNationalId(rawNid),
-        phoneVerified: true, phoneVerifiedAt: new Date(), synthetic: true
+        synthetic: true
       });
       createdUsers++;
     }

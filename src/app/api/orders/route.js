@@ -42,9 +42,9 @@ export async function POST(req) {
   await connectDB();
   await releaseExpiredOrders().catch(() => {}); // آزادکردن موجودیِ سفارش‌های پرداخت‌نشده‌ی منقضی
   const user = await getUser();
-  if (method === 'installment') { // خرید اقساطی فقط با حساب واردشده، موبایل تأییدشده و کد ملی ثبت‌شده
+  if (method === 'installment') { // خرید اقساطی فقط با حساب واردشده و کد ملی ثبت‌شده
     if (!user) return bad('برای خرید اقساطی ابتدا وارد حساب شوید یا ثبت‌نام کنید', 401);
-    if (!user.nationalIdMasked || !user.phoneVerified) return bad('پرونده‌ی اعتباری ناقص است: کد ملی و تأیید موبایل را در «اعتبار و اقساط» حساب خود تکمیل کنید', 403);
+    if (!user.nationalIdMasked) return bad('پرونده‌ی اعتباری ناقص است: کد ملی را در «اعتبار و اقساط» حساب خود تکمیل کنید', 403);
     if (!POLICY.monthOptions.includes(months) || !POLICY.downPaymentOptions.includes(downPct)) return bad('مدت اقساط یا پیش‌پرداخت نامعتبر است');
   }
   const taken = []; // برای برگشت در صورت خطا

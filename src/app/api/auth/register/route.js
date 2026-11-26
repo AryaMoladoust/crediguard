@@ -6,7 +6,6 @@ import { setUserCookie } from '@/lib/user-session';
 import { toLatinDigits } from '@/lib/catalog';
 import { rateLimit, tooMany } from '@/lib/rate-limit';
 import { isValidNationalId, normalizeNationalId, hashNationalId, maskNationalId } from '@/lib/national-id';
-import { consumeOtp } from '@/lib/otp';
 import { runAssessment } from '@/lib/credit-service';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -31,8 +30,7 @@ export async function POST(req) {
     await connectDB();
     const nidHash = hashNationalId(nid);
     if (await User.exists({ $or: [{ phone }, { nationalIdHash: nidHash }] })) return bad(dup, 409);
-    if (!(await consumeOtp(phone, 'register', b?.otp))) return bad('کد تأیید اشتباه یا منقضی شده است', 400);
-    const u = await User.create({ name, phone, email: email || undefined, passwordHash: await hashPassword(password), nationalIdHash: nidHash, nationalIdMasked: maskNationalId(nid), phoneVerified: true, phoneVerifiedAt: new Date() });
+    const u = await User.create({ name, phone, email: email || undefined, passwordHash: await hashPassword(password), nationalIdHash: nidHash, nationalIdMasked: maskNationalId(nid) });
     // پیام‌های فرم تماسِ قبلیِ همین شماره (شماره تأیید شده است) به حساب جدید وصل می‌شود
     await SupportConversation.updateMany({ user: { $exists: false }, 'guest.phone': phone }, { $set: { user: u._id } }).catch(() => {});
     await runAssessment(u._id, 'register').catch((e) => console.error('assessment@register:', e));

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { generateCreditData } from '../src/lib/credit-sim.js';
+import { generateCreditData, generateBureauRecord } from '../src/lib/credit-sim.js';
 import { analyzeCredit } from '../src/lib/credit-agent.js';
 import { POLICY, planOf } from '../src/lib/credit-policy.js';
 import { isValidNationalId, normalizeNationalId, maskNationalId } from '../src/lib/national-id.js';
@@ -10,6 +10,16 @@ const one = generateCreditData('customer-a');
 assert.deepEqual(generateCreditData('customer-a'), one);
 assert.notDeepEqual(generateCreditData('customer-b'), one);
 assert.equal(typeof one.accountBalance, 'number');
+
+// رکورد «مثل بانک مرکزی»: پایدار، مصنوعی، هم‌شکل با فیلدهای موردنیاز و سازگار با data موتور.
+const b1 = generateBureauRecord('customer-a', { fullName: 'تست', mobile: '09120000000', data: one });
+assert.deepEqual(generateBureauRecord('customer-a', { fullName: 'تست', mobile: '09120000000', data: one }), b1);
+assert.equal(b1.synthetic, true);
+for (const k of ['mobile', 'fullName', 'birthYearJalali', 'employment', 'province', 'city', 'address', 'declaredMonthlyIncome', 'accountAgeMonths', 'avgAccountBalance6m', 'recentInquiries6m', 'blacklisted', 'loans', 'cheque']) assert.ok(k in b1, k);
+for (const k of ['activeLoans', 'monthlyObligations', 'overdueInstallments', 'maxDelayDays', 'everDefaulted']) assert.ok(k in b1.loans, k);
+for (const k of ['hasChequebook', 'bouncedLast5y', 'chequeScore']) assert.ok(k in b1.cheque, k);
+assert.equal(b1.declaredMonthlyIncome, one.monthlyIncome);
+assert.ok(b1.birthYearJalali >= 1350 && b1.birthYearJalali <= 1385);
 
 // خروجی ایجنت باید در محدوده و دارای توضیح باشد.
 const assessment = analyzeCredit(one);

@@ -10,7 +10,7 @@ import { SIM_NOTICE } from '@/lib/credit-policy';
 export const dynamic = 'force-dynamic';
 
 async function detail(userId) {
-  const u = await User.findById(userId).select('name phone email nationalIdMasked phoneVerified createdAt').lean();
+  const u = await User.findById(userId).select('name phone email nationalIdMasked createdAt').lean();
   if (!u) return null;
   const { profile, assessment } = await runAssessment(userId, 'admin');
   const [history, orders] = await Promise.all([
@@ -19,8 +19,8 @@ async function detail(userId) {
   ]);
   return {
     notice: SIM_NOTICE,
-    user: { id: String(u._id), name: u.name, phone: u.phone, email: u.email || '', nationalId: u.nationalIdMasked || '', phoneVerified: !!u.phoneVerified, createdAt: u.createdAt },
-    profile: { data: profile.data, simVersion: profile.simVersion, decision: profile.decision?.status || 'auto', decisionNote: profile.decision?.note || '', decisionBy: profile.decision?.by || '', decisionAt: profile.decision?.at || null, adjustments: (profile.adjustments || []).slice(-10).reverse() },
+    user: { id: String(u._id), name: u.name, phone: u.phone, email: u.email || '', nationalId: u.nationalIdMasked || '', createdAt: u.createdAt },
+    profile: { data: profile.data, bureau: profile.bureau || null, simVersion: profile.simVersion, decision: profile.decision?.status || 'auto', decisionNote: profile.decision?.note || '', decisionBy: profile.decision?.by || '', decisionAt: profile.decision?.at || null, adjustments: (profile.adjustments || []).slice(-10).reverse() },
     assessment: { score: assessment.score, riskLevel: assessment.riskLevel, creditLimit: assessment.creditLimit, recommendation: assessment.recommendation, summary: assessment.summary, reasons: assessment.reasons, flags: assessment.flags, metrics: assessment.metrics, engine: assessment.engine, at: assessment.createdAt },
     history: history.map((h) => ({ score: h.score, riskLevel: h.riskLevel, creditLimit: h.creditLimit, recommendation: h.recommendation, trigger: h.trigger, at: h.createdAt })),
     orders: orders.map((o) => ({ id: String(o._id), code: o.code, total: o.total, method: o.method, status: o.status, createdAt: o.createdAt, credit: o.credit?.rule ? { rule: o.credit.rule, recommendation: o.credit.recommendation } : null })),
