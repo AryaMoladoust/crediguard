@@ -14,7 +14,7 @@ const bad = (error, status = 400) => Response.json({ ok: false, error }, { statu
 // برای غیرفعال‌کردن شبیه‌ساز در محیط واقعی: PAYMENT_SIMULATOR=off
 export async function POST(req) {
   if (process.env.PAYMENT_SIMULATOR === 'off') return bad('شبیه‌ساز درگاه غیرفعال است', 503);
-  if (!rateLimit(req, 'pay', 30, 10 * 60_000)) return tooMany();
+  if (!(await rateLimit(req, 'pay', 30, 10 * 60_000))) return tooMany();
   let b; try { b = await req.json(); } catch { return bad('درخواست نامعتبر'); }
   const oid = await verifyPayToken(String(b?.token ?? ''), process.env.SESSION_SECRET);
   if (!oid) return bad('لینک پرداخت نامعتبر یا منقضی شده است', 401);

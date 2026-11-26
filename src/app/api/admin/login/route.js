@@ -14,7 +14,7 @@ export async function POST(req) {
   if (!SESSION_SECRET || SESSION_SECRET.length < 16) {
     return Response.json({ error: 'متغیر SESSION_SECRET تنظیم نشده است (حداقل ۱۶ کاراکتر)' }, { status: 500 });
   }
-  if (!rateLimit(req, 'admin-login', 10, 15 * 60_000)) return tooMany();
+  if (!(await rateLimit(req, 'admin-login', 10, 15 * 60_000))) return tooMany();
   let body = {};
   try { body = await req.json(); } catch {}
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';

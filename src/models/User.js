@@ -5,7 +5,14 @@ const UserSchema = new mongoose.Schema(
     phone: { type: String, required: true, unique: true, index: true },
     email: { type: String, trim: true, lowercase: true, maxlength: 120 },
     passwordHash: { type: String, required: true },
-    address: { type: String, maxlength: 500, default: '' }
+    address: { type: String, maxlength: 500, default: '' },
+    // کد ملی فقط به‌صورت HMAC (یکتا بودن) و نسخه‌ی ماسک‌شده نگهداری می‌شود
+    nationalIdHash: { type: String, unique: true, sparse: true },
+    nationalIdMasked: String,
+    phoneVerified: { type: Boolean, default: false },
+    phoneVerifiedAt: Date,
+    synthetic: { type: Boolean, default: false },
+    passwordChangedAt: Date
   },
   { timestamps: true }
 );

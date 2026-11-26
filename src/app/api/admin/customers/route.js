@@ -4,6 +4,8 @@ import { isAdmin, unauthorized, bad } from '@/lib/admin-guard';
 import { parsePaging } from '@/lib/paging';
 import { customersPage, groupByPhone, shapeCustomer } from '@/lib/customer-query';
 import { productLine, codeOf } from '@/lib/order-query';
+import User from '@/models/User';
+import CreditAssessment from '@/models/CreditAssessment';
 export const dynamic = 'force-dynamic';
 
 // بدون phone: فهرست صفحه‌بندی‌شده‌ی مشتریان (q, sort, mode=new, page, pageSize) + summary کل.
@@ -20,7 +22,10 @@ export async function GET(req) {
     const [c] = await Order.aggregate([{ $match: { status: { $ne: AWAITING_PAYMENT }, 'customer.phone': phone } }, ...groupByPhone]);
     if (!c) return bad('مشتری پیدا نشد', 404);
     const orders = await Order.find({ 'customer.phone': phone, status: { $ne: AWAITING_PAYMENT } }).sort({ createdAt: -1 }).limit(100).lean();
+    const acct = await User.findOne({ phone }).select('_id nationalIdMasked').lean();
+    const asm = acct ? await CreditAssessment.findOne({ user: acct._id, latest: true }).lean() : null;
     return Response.json({
+      credit: acct ? { userId: String(acct._id), nationalId: acct.nationalIdMasked || '', score: asm?.score ?? null, riskLevel: asm?.riskLevel ?? null, creditLimit: asm?.creditLimit ?? null, recommendation: asm?.recommendation ?? null } : null,
       customer: shapeCustomer(c),
       orders: orders.map((o) => ({ id: String(o._id), code: codeOf(o), product: productLine(o), total: o.total || 0, method: o.method || 'cash', status: o.status || 'pending', createdAt: o.createdAt }))
     });

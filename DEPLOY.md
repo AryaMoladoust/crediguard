@@ -21,6 +21,8 @@ Import همین ریپو ← Framework: Next.js (خودکار) ← قبل از D
 | `MONGODB_URI` | رشته‌ی اتصال Atlas |
 | `ADMIN_EMAIL` | ایمیل ورود به پنل |
 | `ADMIN_PASSWORD` | رمز قوی و طولانی |
+| `UPSTASH_REDIS_REST_URL` | (اختیاری ولی توصیه‌شده) آدرس REST دیتابیس Redis برای rate limit مشترک |
+| `UPSTASH_REDIS_REST_TOKEN` | (اختیاری ولی توصیه‌شده) توکن REST همان دیتابیس |
 | `SESSION_SECRET` | رشته‌ی تصادفی ≥ ۳۲ کاراکتر: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 
 ## ۴) ثبت محصولات (یک بار، از کامپیوتر خودتان)

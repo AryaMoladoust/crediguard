@@ -66,6 +66,14 @@ export async function verifyUserToken(token, secret) {
   return safeEqual(token.slice(i + 1), await hmac(payload, secret)) ? uid : null;
 }
 
+// خروجی: { uid, iat } تا با تغییر رمز بتوان نشست‌های قدیمی را باطل کرد
+export async function verifyUserSession(token, secret) {
+  const uid = await verifyUserToken(token, secret);
+  if (!uid) return null;
+  const exp = Number(token.split('.')[2]);
+  return { uid, iat: exp - MAX_AGE * 4 };
+}
+
 // ---- توکن پرداخت (سفارش نقدی): p1.<orderId>.<exp>.<sig> — ۳۰ دقیقه اعتبار
 export const PAY_WINDOW_SEC = 30 * 60;
 export async function createPayToken(oid, secret) {

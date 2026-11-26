@@ -5,6 +5,7 @@ import Product from '@/models/Product';
 import { getAdmin, unauthorized, bad } from '@/lib/admin-guard';
 import { ORDER_STATUSES, STATUS_LABEL, nextStatuses, statusesBefore } from '@/lib/order-flow';
 import { codeOf } from '@/lib/order-query';
+import { buildSchedule, isOverdue } from '@/lib/credit-service';
 export const dynamic = 'force-dynamic';
 
 // جزئیات کامل یک سفارش: مشتری و آدرس، اقلام، پرداخت، سابقه‌ی وضعیت و انتقال‌های مجاز بعدی
@@ -25,7 +26,10 @@ export async function GET(_req, { params }) {
       items: (o.items || []).map((i) => ({ name: i.name, price: i.price || 0, qty: i.qty || 0, productId: i.product && existing.has(String(i.product)) ? String(i.product) : null })),
       payment: { status: o.payment?.status || null, ref: o.payment?.ref || '', paidAt: o.payment?.paidAt || null },
       history: (o.history || []).map((h) => ({ status: h.status, at: h.at, by: h.by || '' })),
-      next: nextStatuses(o.status)
+      next: nextStatuses(o.status),
+      installment: o.installment?.months ? { months: o.installment.months, downPayment: o.installment.downPayment, financed: o.installment.financed, monthly: o.installment.monthly, schedule: (o.installment.schedule || []).map((r) => ({ no: r.no, dueDate: r.dueDate, amount: r.amount, status: r.status === 'paid' ? 'paid' : isOverdue(r) ? 'overdue' : 'due', paidAt: r.paidAt || null })) } : null,
+      credit: o.credit?.rule ? { score: o.credit.score, riskLevel: o.credit.riskLevel, limit: o.credit.limit, recommendation: o.credit.recommendation, rule: o.credit.rule } : null,
+      userId: o.user ? String(o.user) : null
     });
   } catch (e) {
     console.error('admin order GET:', e);
@@ -61,6 +65,10 @@ export async function PATCH(req, { params }) {
     if (to === 'cancelled') {
       // برگرداندن موجودی کالاها به انبار
       await Promise.all((before.items || []).map((i) => i.product && Product.updateOne({ _id: i.product }, { $inc: { stock: i.qty, sold: -i.qty } })));
+    }
+    // تأیید سفارش اقساطی: جدول اقساط ساخته می‌شود (فقط یک‌بار)
+    if (to === 'confirmed' && before.method === 'installment' && before.installment?.months && !(before.installment.schedule || []).length) {
+      await Order.updateOne({ _id: id, 'installment.schedule.0': { $exists: false } }, { $set: { 'installment.schedule': buildSchedule(before.installment) } });
     }
     return Response.json({ ok: true, status: to, next: nextStatuses(to) });
   } catch (e) {

@@ -10,6 +10,7 @@ const ALL_STATUSES = [...ORDER_STATUSES, AWAITING_PAYMENT];
 const OrderSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
+    synthetic: { type: Boolean, default: false },
     code: { type: String, unique: true, sparse: true },
     customer: { name: String, phone: { type: String, index: true }, address: String },
     note: { type: String, maxlength: 500 },
@@ -19,6 +20,13 @@ const OrderSchema = new mongoose.Schema(
     status: { type: String, enum: ALL_STATUSES, default: 'pending', index: true },
     payment: { status: { type: String, enum: ['unpaid', 'paid', 'failed'] }, ref: String, paidAt: Date },
     shippedAt: Date,
+    // خرید اقساطی: برنامه‌ی درخواستی و (پس از تأیید مدیر) جدول اقساط
+    installment: {
+      months: Number, downPayment: Number, financed: Number, monthly: Number,
+      schedule: [{ _id: false, no: Number, dueDate: Date, amount: Number, status: { type: String, enum: ['due', 'paid'], default: 'due' }, paidAt: Date, paidBy: String }]
+    },
+    // نتیجه‌ی اعتبارسنجی لحظه‌ی ثبت (پیشنهاد ایجنت + نتیجه‌ی قوانین)
+    credit: { assessment: { type: mongoose.Schema.Types.ObjectId, ref: 'CreditAssessment' }, score: Number, riskLevel: String, limit: Number, recommendation: String, rule: String },
     // سابقه‌ی تغییر وضعیت توسط مدیران (برای صفحه‌ی جزئیات سفارش)
     history: [{ _id: false, status: String, at: Date, by: String }]
   },
