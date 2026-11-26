@@ -4,6 +4,7 @@ import { analyzeCredit } from '../src/lib/credit-agent.js';
 import { POLICY, planOf } from '../src/lib/credit-policy.js';
 import { isValidNationalId, normalizeNationalId, maskNationalId } from '../src/lib/national-id.js';
 import { answer } from '../src/lib/support-bot.js';
+import { summarizeInstallments, planPayment, exposureFromOrders, purchaseCapacity, evaluateRequest, buildSchedule, downPaid } from '../src/lib/installments.js';
 
 // داده‌ی شبیه‌سازی‌شده باید برای یک شناسه پایدار و برای شناسه‌های دیگر مستقل باشد.
 const one = generateCreditData('customer-a');
@@ -50,4 +51,48 @@ const unknown = answer('سؤال نامرتبط و ناشناخته', { user: { 
 assert.equal(unknown.handoff, true);
 assert.equal(unknown.intent, 'unknown');
 
-console.log('✔ domain tests passed (simulation, scoring, installment policy, national ID, support bot)');
+// ---- اقساط: خلاصه برای فروشنده/مشتری، پرداخت زودتر، تسویه‌ی همه، سقف تجمعی
+const NOW = new Date('2026-11-27T12:00:00Z');
+const at = (d) => new Date(NOW.getTime() + d * 86400000);
+const row = (no, d, status = 'due', amount = 1_000_000) => ({ no, dueDate: at(d), amount, status });
+const ord = (code, status, inst) => ({ _id: code, code, method: 'installment', status, total: 10_000_000, installment: { months: 4, downPayment: 2_000_000, financed: 8_000_000, monthly: 2_000_000, ...inst } });
+const o1 = ord('A', 'confirmed', { down: { status: 'paid' }, schedule: [row(1, -40, 'paid'), row(2, -5), row(3, 25), row(4, 55)] });
+const o2 = ord('B', 'confirmed', { down: { status: 'unpaid' }, schedule: [row(1, 3), row(2, 33)] });
+const o3 = ord('C', 'pending', {});
+const sum = summarizeInstallments([o1, o2, o3], NOW);
+assert.equal(sum.totalCount, 6); assert.equal(sum.paidCount, 1); assert.equal(sum.remainingCount, 5);
+assert.equal(sum.overdueCount, 1); assert.equal(sum.overdueAmount, 1_000_000); assert.equal(sum.maxDaysLate, 5);
+assert.equal(sum.next.daysLeft, 3);
+assert.equal(sum.downDueCount, 1); assert.equal(sum.downDueAmount, 2_000_000);
+assert.equal(sum.awaiting.length, 1); assert.equal(sum.plans.find((p) => p.code === 'A').schedule[1].daysLate, 5);
+assert.equal(summarizeInstallments([{ ...o1, status: 'cancelled' }], NOW).totalCount, 0);
+
+// پرداخت: پیش‌پرداخت اول، بعد هر قسط در هر تاریخ، بعد تسویه‌ی همه؛ مبلغ از سفارش می‌آید
+assert.equal(downPaid({}), true); // سفارش قدیمی بدون down قفل نمی‌شود
+assert.equal(planPayment(o2, 'down').amount, 2_000_000);
+assert.match(planPayment(o2, 'n1').error, /پیش‌پرداخت/);
+assert.match(planPayment(o3, 'down').error, /تأیید/);
+assert.equal(planPayment(o1, 'n3').amount, 1_000_000); // پرداخت زودتر (سررسید ۲۵ روز بعد)
+assert.equal(planPayment(o1, 'n2').nos[0], 2);
+assert.match(planPayment(o1, 'n1').error, /پرداخت شده/); // قسط پرداخت‌شده دوباره پرداخت نمی‌شود
+assert.equal(planPayment(o1, 'all').amount, 3_000_000); assert.deepEqual(planPayment(o1, 'all').nos, [2, 3, 4]);
+assert.match(planPayment(o1, 'down').error, /قبلاً/);
+assert.ok(planPayment(o1, 'x9').error);
+
+// سقف تجمعی: مانده‌ی اقساط باز + سفارش در انتظار از سقف کم می‌شود
+const ex = exposureFromOrders([o1, o2, o3]);
+assert.equal(ex.outstanding, 3_000_000 + 2_000_000 + 8_000_000);
+const ass = { creditLimit: 20_000_000, recommendation: 'approve', metrics: { monthlyCapacity: 10_000_000 } };
+const prof = { decision: { status: 'auto' } };
+assert.equal(purchaseCapacity({ profile: prof, assessment: ass, exposure: ex }).available, 7_000_000);
+assert.equal(purchaseCapacity({ profile: { decision: { status: 'rejected' } }, assessment: ass }).blocked, true);
+assert.equal(evaluateRequest({ profile: prof, assessment: ass, total: 10_000_000, downPct: 10, months: 6, exposure: { outstanding: 0, monthly: 0 } }).ok, true);
+assert.equal(evaluateRequest({ profile: prof, assessment: ass, total: 10_000_000, downPct: 10, months: 6, exposure: ex }).rule, 'over_limit');
+const sched = buildSchedule({ months: 3, financed: 10_000_000, monthly: 3_333_000 }, NOW);
+assert.equal(sched.reduce((s, r) => s + r.amount, 0), 10_000_000);
+
+// مشتری هرگز امتیاز/ریسک/تحلیل ایجنت را از بات نمی‌شنود
+const lim = answer('سقف اعتبار من چقدر است', { user: { name: 'ت' }, purchase: { limit: 20_000_000, available: 7_000_000, blocked: false } });
+assert.equal(lim.intent, 'limit'); assert.ok(!/امتیاز|ریسک/.test(lim.text));
+
+console.log('✔ domain tests passed (simulation, scoring, installment policy, installment payments, national ID, support bot)');

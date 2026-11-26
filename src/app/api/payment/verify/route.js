@@ -1,13 +1,27 @@
 import { randomInt } from 'node:crypto';
 import { connectDB } from '@/lib/db';
 import Order, { AWAITING_PAYMENT } from '@/models/Order';
-import { verifyPayToken } from '@/lib/auth';
+import { verifyPayToken, verifyInstToken } from '@/lib/auth';
+import { settleInstallment } from '@/lib/installment-pay';
 import { releaseExpiredOrders } from '@/lib/payment';
 import { rateLimit, tooMany } from '@/lib/rate-limit';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 const bad = (error, status = 400) => Response.json({ ok: false, error }, { status });
+
+// پرداخت اقساط (پیش‌پرداخت، یک قسط، تسویه‌ی همه): توکن q1 از /api/credit/pay صادر می‌شود
+async function payInstallment(token, result) {
+  const t = await verifyInstToken(token, process.env.SESSION_SECRET);
+  if (!t) return bad('لینک پرداخت نامعتبر یا منقضی شده است', 401);
+  if (result !== 'success') return Response.json({ ok: false, error: 'پرداخت انجام نشد' });
+  try {
+    await connectDB();
+    const r = await settleInstallment(t.oid, t.target);
+    if (!r.ok) return bad(r.error, r.status);
+    return Response.json({ ok: true, code: r.code, ref: r.ref, amount: r.amount, kind: r.kind });
+  } catch (e) { console.error('installment verify:', e); return bad('خطای سرور', 500); }
+}
 
 // نتیجه‌ی پرداخت از شبیه‌ساز درگاه. هنگام وصل‌شدن به درگاه واقعی، این مسیر باید به callback/verify
 // سمت سرور همان درگاه تبدیل شود (نتیجه را هرگز از مرورگر قبول نکنید).
@@ -16,7 +30,9 @@ export async function POST(req) {
   if (process.env.PAYMENT_SIMULATOR === 'off') return bad('شبیه‌ساز درگاه غیرفعال است', 503);
   if (!(await rateLimit(req, 'pay', 30, 10 * 60_000))) return tooMany();
   let b; try { b = await req.json(); } catch { return bad('درخواست نامعتبر'); }
-  const oid = await verifyPayToken(String(b?.token ?? ''), process.env.SESSION_SECRET);
+  const rawToken = String(b?.token ?? '');
+  if (rawToken.startsWith('q1.')) return payInstallment(rawToken, b?.result);
+  const oid = await verifyPayToken(rawToken, process.env.SESSION_SECRET);
   if (!oid) return bad('لینک پرداخت نامعتبر یا منقضی شده است', 401);
   const success = b?.result === 'success';
   try {

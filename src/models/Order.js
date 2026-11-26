@@ -23,7 +23,11 @@ const OrderSchema = new mongoose.Schema(
     // خرید اقساطی: برنامه‌ی درخواستی و (پس از تأیید مدیر) جدول اقساط
     installment: {
       months: Number, downPayment: Number, financed: Number, monthly: Number,
-      schedule: [{ _id: false, no: Number, dueDate: Date, amount: Number, status: { type: String, enum: ['due', 'paid'], default: 'due' }, paidAt: Date, paidBy: String }]
+      // پیش‌پرداخت (قسط اول): بعد از تأیید مدیر با درگاه پرداخت می‌شود؛ سفارش قدیمی بدون این فیلد «پرداخت‌شده» حساب می‌شود
+      down: { status: { type: String, enum: ['unpaid', 'paid'] }, ref: String, paidAt: Date },
+      schedule: [{ _id: false, no: Number, dueDate: Date, amount: Number, status: { type: String, enum: ['due', 'paid'], default: 'due' }, paidAt: Date, paidBy: String, payRef: String }],
+      // دفتر پرداخت‌های درگاه (پیش‌پرداخت، پرداخت زودتر، تسویه‌ی همه)
+      payments: [{ _id: false, ref: String, kind: { type: String, enum: ['down', 'one', 'all'] }, nos: [Number], amount: Number, at: Date }]
     },
     // نتیجه‌ی اعتبارسنجی لحظه‌ی ثبت (پیشنهاد ایجنت + نتیجه‌ی قوانین)
     credit: { assessment: { type: mongoose.Schema.Types.ObjectId, ref: 'CreditAssessment' }, score: Number, riskLevel: String, limit: Number, recommendation: String, rule: String },

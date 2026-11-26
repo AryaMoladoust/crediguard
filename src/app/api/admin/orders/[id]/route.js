@@ -27,7 +27,7 @@ export async function GET(_req, { params }) {
       payment: { status: o.payment?.status || null, ref: o.payment?.ref || '', paidAt: o.payment?.paidAt || null },
       history: (o.history || []).map((h) => ({ status: h.status, at: h.at, by: h.by || '' })),
       next: nextStatuses(o.status),
-      installment: o.installment?.months ? { months: o.installment.months, downPayment: o.installment.downPayment, financed: o.installment.financed, monthly: o.installment.monthly, schedule: (o.installment.schedule || []).map((r) => ({ no: r.no, dueDate: r.dueDate, amount: r.amount, status: r.status === 'paid' ? 'paid' : isOverdue(r) ? 'overdue' : 'due', paidAt: r.paidAt || null })) } : null,
+      installment: o.installment?.months ? { months: o.installment.months, down: { status: o.installment.down?.status || null, paidAt: o.installment.down?.paidAt || null, ref: o.installment.down?.ref || '' }, downPayment: o.installment.downPayment, financed: o.installment.financed, monthly: o.installment.monthly, schedule: (o.installment.schedule || []).map((r) => ({ no: r.no, dueDate: r.dueDate, amount: r.amount, status: r.status === 'paid' ? 'paid' : isOverdue(r) ? 'overdue' : 'due', paidAt: r.paidAt || null })) } : null,
       credit: o.credit?.rule ? { score: o.credit.score, riskLevel: o.credit.riskLevel, limit: o.credit.limit, recommendation: o.credit.recommendation, rule: o.credit.rule } : null,
       userId: o.user ? String(o.user) : null
     });
@@ -53,13 +53,15 @@ export async function PATCH(req, { params }) {
     await connectDB();
     const now = new Date();
     const before = await Order.findOneAndUpdate(
-      { _id: id, status: { $in: statusesBefore(to) } },
+      // ارسال سفارش اقساطی فقط بعد از پرداخت پیش‌پرداخت (قسط اول) توسط مشتری
+      { _id: id, status: { $in: statusesBefore(to) }, ...(to === 'shipped' && { $or: [{ method: { $ne: 'installment' } }, { 'installment.down.status': { $ne: 'unpaid' } }] }) },
       { $set: { status: to, ...(to === 'shipped' && { shippedAt: now }) }, $push: { history: { status: to, at: now, by: admin.name || admin.email } } },
       { new: false }
     ).lean();
     if (!before) {
-      const cur = await Order.findById(id).select('status').lean();
+      const cur = await Order.findById(id).select('status method installment.down').lean();
       if (!cur || cur.status === 'awaiting_payment') return bad('سفارش پیدا نشد', 404);
+      if (to === 'shipped' && cur.status === 'confirmed' && cur.method === 'installment' && cur.installment?.down?.status === 'unpaid') return bad('پیش‌پرداخت (قسط اول) توسط مشتری هنوز پرداخت نشده است؛ بعد از پرداخت می‌توانید ارسال کنید', 409);
       return bad(`انتقال از «${STATUS_LABEL[cur.status]}» به «${STATUS_LABEL[to]}» مجاز نیست`, 409);
     }
     if (to === 'cancelled') {

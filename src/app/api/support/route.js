@@ -4,7 +4,6 @@ import { getUser } from '@/lib/user-session';
 import { rateLimit, tooMany } from '@/lib/rate-limit';
 import { customerCredit } from '@/lib/customer-credit';
 import { answer } from '@/lib/support-bot';
-import { runAssessmentOnly } from '@/lib/credit-lookup';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 const err = (error, status = 400) => Response.json({ error }, { status });
@@ -44,8 +43,7 @@ export async function POST(req) {
       c.handoff = true; c.status = 'waiting_admin';
       c.messages.push({ from: 'bot', intent: 'human', text: 'مکالمه به پشتیبان انسانی ارجاع شد. هر زمان پاسخ بدهد همین‌جا می‌بینید.', at: new Date() });
     } else {
-      const ctx = await customerCredit(u, { assess: false });
-      ctx.assessment = ctx.ready ? await runAssessmentOnly(u.id) : null;
+      const ctx = await customerCredit(u); // شامل purchase (سقف قابل‌استفاده)؛ تحلیل ایجنت به مشتری گفته نمی‌شود
       ctx.user = u;
       const r = answer(text, ctx);
       c.messages.push({ from: 'bot', intent: r.intent, text: r.text, at: new Date() });

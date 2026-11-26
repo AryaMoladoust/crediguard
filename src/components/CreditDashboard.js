@@ -1,16 +1,12 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck, AlertTriangle, FlaskConical, CheckCircle2, Clock3 } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, Clock3, CreditCard, Zap, BadgeCheck } from 'lucide-react';
 
 const fa = (n) => Math.round(n || 0).toLocaleString('fa-IR');
 const jd = (d) => new Date(d).toLocaleDateString('fa-IR-u-ca-persian');
-const RISK = { low: ['کم', 'bg-emerald-50 text-emerald-700'], medium: ['متوسط', 'bg-amber-50 text-amber-700'], high: ['بالا', 'bg-orange-50 text-orange-700'], critical: ['بحرانی', 'bg-red-50 text-red-700'] };
-const REC = { approve: ['تأیید', 'bg-emerald-50 text-emerald-700'], review: ['نیازمند بررسی', 'bg-amber-50 text-amber-700'], reject: ['رد', 'bg-red-50 text-red-700'] };
-const DEC = { auto: null, approved: 'تأیید دستی توسط مدیر', rejected: 'رد توسط مدیر', review: 'در حال بررسی توسط مدیر' };
 const INST = { paid: ['پرداخت‌شده', 'bg-emerald-50 text-emerald-700'], due: ['در انتظار', 'bg-ink-100 text-ink-700'], overdue: ['معوق', 'bg-red-50 text-red-700'] };
 const Pill = ({ c, children }) => <span className={`rounded-full px-3 py-1 text-xs font-bold ${c}`}>{children}</span>;
-const SimBadge = () => <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-bold text-violet-700"><FlaskConical size={12} />داده آزمایشی (شبیه‌سازی‌شده)</span>;
 
 function CompleteProfile({ onDone }) {
   const [f, setF] = useState({ nationalId: '' });
@@ -38,55 +34,84 @@ export default function CreditDashboard() {
   const router = useRouter();
   const [d, setD] = useState(null);
   const [err, setErr] = useState('');
+  const [busy, setBusy] = useState('');
+  const [payErr, setPayErr] = useState('');
+  const [justPaid, setJustPaid] = useState(false);
   const load = useCallback(async () => {
     try { const r = await fetch('/api/credit/me', { cache: 'no-store' }); const j = await r.json(); if (r.status === 401) return router.push('/account/login'); if (!r.ok) throw new Error(j.error || 'خطا'); setD(j); setErr(''); }
     catch (x) { setErr(x.message || 'دریافت اطلاعات انجام نشد'); }
   }, [router]);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { try { setJustPaid(new URLSearchParams(window.location.search).get('paid') === '1'); } catch {} }, []);
+
+  // اتصال به درگاه: مبلغ سمت سرور از روی سفارش محاسبه می‌شود
+  async function pay(orderId, target) {
+    const key = `${orderId}:${target}`;
+    setBusy(key); setPayErr('');
+    try {
+      const r = await fetch('/api/credit/pay', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId, target }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.payUrl) throw new Error(j.error || 'اتصال به درگاه انجام نشد');
+      window.location.href = j.payUrl;
+    } catch (x) { setPayErr(x.message); setBusy(''); }
+  }
 
   if (err) return <p role="alert" className="card mt-6 p-5 text-sm font-semibold text-red-700">{err} <button className="mr-2 underline" onClick={load}>تلاش دوباره</button></p>;
   if (!d) return <div className="mt-6 grid gap-4 lg:grid-cols-3">{[0, 1, 2].map((i) => <div key={i} className="card h-40 animate-pulse bg-ink-100" />)}</div>;
   if (!d.ready) return <div className="mt-6 max-w-xl"><CompleteProfile onDone={() => { load(); router.refresh(); }} /></div>;
 
-  const a = d.assessment, p = d.profile?.simulated, inst = d.installments;
-  const risk = RISK[a.riskLevel], rec = REC[a.recommendation];
+  const pu = d.purchase, inst = d.installments;
   return (
     <div className="mt-6 space-y-6">
-      <div className="flex items-start gap-3 rounded-2xl bg-violet-50 p-4 text-sm text-violet-800"><FlaskConical size={20} className="mt-0.5 shrink-0" /><p>{d.notice}</p></div>
+      {justPaid && <p role="status" className="flex items-center gap-2 rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-700"><BadgeCheck size={18} />پرداخت با موفقیت ثبت شد.</p>}
+      {payErr && <p role="alert" className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-700">{payErr}</p>}
 
       <section className="grid gap-4 lg:grid-cols-3">
-        <div className="card p-5"><div className="flex items-center justify-between"><h2 className="text-base">امتیاز اعتباری</h2><SimBadge /></div>
-          <p className="mt-3 text-4xl font-extrabold">{fa(a.score)}<small className="text-base font-semibold text-ink-400"> / ۹۰۰</small></p>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-ink-100"><div className="h-full rounded-full bg-brand transition-all" style={{ width: `${((a.score - 300) / 600) * 100}%` }} /></div>
-          <div className="mt-3 flex flex-wrap gap-2"><Pill c={risk[1]}>ریسک {risk[0]}</Pill><Pill c={rec[1]}>پیشنهاد ایجنت: {rec[0]}</Pill></div></div>
-        <div className="card p-5"><h2 className="text-base">سقف اعتبار خرید اقساطی</h2>
-          <p className="mt-3 text-3xl font-extrabold">{fa(a.creditLimit)} <small className="text-sm font-semibold text-ink-400">تومان</small></p>
-          <p className="mt-2 text-xs leading-6 text-ink-500">ظرفیت قسط ماهانه: {fa(a.metrics?.monthlyCapacity)} تومان. تصمیم نهایی هر سفارش با قوانین سیستم و تأیید مدیر است.</p>
-          {DEC[d.profile.decision] && <p className="mt-2 rounded-xl bg-brand-50 p-2.5 text-xs font-bold text-brand-700">{DEC[d.profile.decision]}{d.profile.decisionNote ? `: ${d.profile.decisionNote}` : ''}</p>}</div>
-        <div className="card p-5"><h2 className="text-base">اقساط</h2>
-          <p className="mt-3 text-sm">{inst.overdueCount ? <span className="font-bold text-red-700">{fa(inst.overdueCount)} قسط معوق ({fa(inst.overdueAmount)} تومان)</span> : <span className="flex items-center gap-1.5 font-bold text-emerald-700"><CheckCircle2 size={16} />قسط معوقی ندارید</span>}</p>
-          <p className="mt-2 text-sm text-ink-500">{inst.next ? <>قسط بعدی: <b className="text-ink">{fa(inst.next.amount)} تومان</b> — {jd(inst.next.dueDate)}</> : 'قسط پیش‌رویی ندارید.'}</p></div>
+        <div className="card p-5"><h2 className="flex items-center gap-2 text-base"><ShieldCheck size={18} className="text-brand" />میزان خرید اقساطی شما</h2>
+          {pu?.blocked
+            ? <p className="mt-3 text-sm font-semibold leading-7 text-red-700">در حال حاضر امکان خرید اقساطی برای حساب شما فعال نیست. برای اطلاعات بیشتر با پشتیبانی صحبت کنید.</p>
+            : <><p className="mt-3 text-3xl font-extrabold">{fa(pu?.available)} <small className="text-sm font-semibold text-ink-400">تومان</small></p>
+              <p className="mt-2 text-xs leading-6 text-ink-500">حداکثر مبلغ اقساطی که الان می‌توانید بگیرید. با پیش‌پرداخت {fa(10)}٪ تا حدود <b className="text-ink">{fa(pu?.maxTotal)} تومان</b> کالا می‌توانید بخرید. با پرداخت اقساط، این مبلغ آزاد می‌شود.</p>
+              {pu?.used > 0 && <p className="mt-2 text-xs text-ink-500">از سقف {fa(pu.limit)} تومان، {fa(pu.used)} تومان درگیر اقساط جاری است.</p>}</>}
+          <p className="mt-2 text-[11px] text-ink-400">تأیید نهایی هر سفارش با مدیر فروشگاه است.</p></div>
+        <div className="card p-5"><h2 className="text-base">وضعیت اقساط</h2>
+          <dl className="mt-3 grid grid-cols-3 gap-2 text-center">{[['کل اقساط', inst.totalCount], ['پرداخت‌شده', inst.paidCount], ['باقی‌مانده', inst.remainingCount]].map(([k, v]) => <div key={k} className="rounded-xl bg-ink-50 p-2"><dd className="text-xl font-extrabold">{fa(v)}</dd><dt className="text-[11px] text-ink-500">{k}</dt></div>)}</dl>
+          <p className="mt-3 text-sm text-ink-500">مانده‌ی بدهی اقساط: <b className="text-ink">{fa(inst.remainingAmount)} تومان</b></p></div>
+        <div className="card p-5"><h2 className="text-base">سررسید و تأخیر</h2>
+          <p className="mt-3 text-sm">{inst.overdueCount ? <span className="font-bold text-red-700">{fa(inst.overdueCount)} قسط معوق ({fa(inst.overdueAmount)} تومان)، حداکثر {fa(inst.maxDaysLate)} روز تأخیر</span> : <span className="flex items-center gap-1.5 font-bold text-emerald-700"><CheckCircle2 size={16} />قسط معوقی ندارید</span>}</p>
+          {inst.downDueCount > 0 && <p className="mt-2 text-sm font-bold text-amber-700">{fa(inst.downDueCount)} پیش‌پرداخت در انتظار پرداخت ({fa(inst.downDueAmount)} تومان)</p>}
+          <p className="mt-2 text-sm text-ink-500">{inst.next ? <>قسط بعدی: <b className="text-ink">{fa(inst.next.amount)} تومان</b> — {jd(inst.next.dueDate)} ({fa(inst.next.daysLeft)} روز دیگر)</> : 'قسط پیش‌رویی ندارید.'}</p></div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div className="card p-5"><h2 className="mb-3 flex items-center gap-2 text-base"><ShieldCheck size={18} className="text-brand" />تحلیل ایجنت اعتبار یار</h2>
-          <p className="text-sm leading-7">{a.summary}</p>
-          <ul className="mt-3 space-y-1.5">{a.reasons.map((r, i) => <li key={i} className="flex items-center justify-between gap-3 text-sm"><span>{r.label}</span><b dir="ltr" className={r.delta > 0 ? 'text-emerald-700' : 'text-red-700'}>{r.delta > 0 ? '+' : ''}{r.delta.toLocaleString('fa-IR')}</b></li>)}</ul>
-          {a.flags.length > 0 && <div className="mt-4 space-y-2">{a.flags.map((f) => <p key={f.code} className="flex items-start gap-2 rounded-xl bg-amber-50 p-2.5 text-xs font-semibold text-amber-800"><AlertTriangle size={15} className="mt-0.5 shrink-0" />{f.text}</p>)}</div>}
-          <p className="mt-3 text-[11px] text-ink-400">موتور تحلیل: {a.engine} · {jd(a.at)}</p></div>
-        <div className="card p-5"><div className="mb-3 flex items-center justify-between"><h2 className="text-base">اطلاعات اعتباری</h2><SimBadge /></div>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-sm">{[
-            ['موجودی حساب (فرضی)', `${fa(p.accountBalance)} تومان`], ['درآمد ماهانه', `${fa(p.monthlyIncome)} تومان`], ['خوش‌حسابی', `${fa(p.goodStandingPct)}٪`], ['چک برگشتی', fa(p.bouncedCheques)],
-            ['تسهیلات فعال', fa(p.activeLoans)], ['مجموع بدهی', `${fa(p.totalDebt)} تومان`], ['اقساط معوق', fa(p.overdueInstallments)], ['سابقه‌ی نکول', p.everDefaulted ? 'دارد' : 'ندارد']].map(([k, v]) => <div key={k}><dt className="text-xs text-ink-500">{k}</dt><dd className="font-bold">{v}</dd></div>)}</dl>
-          <p className="mt-3 text-[11px] text-ink-400">کد ملی: <span dir="ltr">{d.user.nationalId}</span></p></div>
-      </section>
+      {inst.awaiting.length > 0 && <section className="card p-5"><h2 className="flex items-center gap-2 text-base"><Clock3 size={18} />در انتظار تأیید مدیر</h2>
+        <ul className="mt-3 space-y-2 text-sm">{inst.awaiting.map((a) => <li key={a.code} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-ink-50 p-3"><b dir="ltr">{a.code}</b><span className="text-ink-500">{fa(a.months)} قسط {fa(a.monthly)} تومانی · پیش‌پرداخت {fa(a.downPayment)} تومان</span></li>)}</ul>
+        <p className="mt-2 text-xs text-ink-500">بعد از تأیید مدیر، پیش‌پرداخت (قسط اول) و جدول اقساط همین‌جا برای پرداخت با درگاه نمایش داده می‌شود.</p></section>}
 
       <section className="card p-5 sm:p-6"><h2 className="text-lg">اقساط من</h2>
         {!inst.plans.length ? <p className="mt-4 flex items-center gap-2 text-sm text-ink-500"><Clock3 size={16} />جدول اقساط بعد از تأیید سفارش اقساطی توسط مدیر اینجا ساخته می‌شود.</p> :
-          inst.plans.map((pl) => (
-            <div key={pl.code} className="mt-5"><b dir="ltr" className="text-sm">{pl.code}</b><small className="mr-2 text-ink-500">{fa(pl.paidCount)} از {fa(pl.months)} قسط پرداخت شده</small>
-              <div className="mt-2 overflow-x-auto"><table className="w-full min-w-[420px] text-sm"><thead><tr className="text-xs text-ink-500"><th className="py-1.5 text-right">قسط</th><th className="text-right">سررسید</th><th className="text-right">مبلغ (تومان)</th><th className="text-right">وضعیت</th></tr></thead>
-                <tbody>{pl.schedule.map((r) => <tr key={r.no} className="border-t border-ink-100"><td className="py-2">{fa(r.no)}</td><td>{jd(r.dueDate)}</td><td>{fa(r.amount)}</td><td><Pill c={INST[r.status][1]}>{INST[r.status][0]}</Pill></td></tr>)}</tbody></table></div></div>))}
+          inst.plans.map((pl) => {
+            const downOk = pl.down.status === 'paid';
+            const open = pl.schedule.filter((r) => r.status !== 'paid');
+            const allAmount = open.reduce((s, r) => s + r.amount, 0);
+            return (
+              <div key={pl.code} className="mt-6 border-t border-ink-100 pt-5 first:mt-4 first:border-0 first:pt-0">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div><b dir="ltr" className="text-sm">{pl.code}</b><small className="mr-2 text-ink-500">{fa(pl.paidCount)} از {fa(pl.months)} قسط پرداخت شده · مانده {fa(pl.remainingAmount)} تومان</small></div>
+                  {downOk && open.length > 1 && <button className="btn btn-primary !min-h-10" disabled={!!busy} onClick={() => pay(pl.orderId, 'all')}><Zap size={15} />{busy === `${pl.orderId}:all` ? 'در حال اتصال...' : `پرداخت همه اقساط (${fa(allAmount)} تومان)`}</button>}
+                </div>
+                <div className={`mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl p-3 text-sm ${downOk ? 'bg-emerald-50' : 'bg-amber-50'}`}>
+                  <span><b>پیش‌پرداخت (قسط اول)</b> · {fa(pl.down.amount)} تومان {downOk && pl.down.paidAt ? `· پرداخت در ${jd(pl.down.paidAt)}` : ''}</span>
+                  {downOk ? <Pill c="bg-emerald-100 text-emerald-700">پرداخت‌شده</Pill> : <button className="btn btn-primary !min-h-10" disabled={!!busy} onClick={() => pay(pl.orderId, 'down')}><CreditCard size={15} />{busy === `${pl.orderId}:down` ? 'در حال اتصال...' : 'پرداخت با درگاه'}</button>}
+                </div>
+                {!downOk && <p className="mt-2 text-xs text-amber-800">پرداخت اقساط و ارسال کالا بعد از پرداخت پیش‌پرداخت ممکن می‌شود.</p>}
+                <div className="mt-3 overflow-x-auto"><table className="w-full min-w-[560px] text-sm"><thead><tr className="text-xs text-ink-500"><th className="py-1.5 text-right">قسط</th><th className="text-right">سررسید</th><th className="text-right">مبلغ (تومان)</th><th className="text-right">وضعیت</th><th className="text-right">زمان</th><th /></tr></thead>
+                  <tbody>{pl.schedule.map((r) => <tr key={r.no} className="border-t border-ink-100">
+                    <td className="py-2">{fa(r.no)}</td><td>{jd(r.dueDate)}</td><td>{fa(r.amount)}</td>
+                    <td><Pill c={INST[r.status][1]}>{INST[r.status][0]}</Pill></td>
+                    <td className="text-xs text-ink-500">{r.status === 'paid' ? (r.paidAt ? `پرداخت در ${jd(r.paidAt)}` : '') : r.status === 'overdue' ? <b className="text-red-700">{r.daysLate > 0 ? `${fa(r.daysLate)} روز تأخیر` : 'امروز سررسید شده'}</b> : `${fa(r.daysLeft)} روز تا سررسید`}</td>
+                    <td className="text-left">{r.status !== 'paid' && <button className="btn btn-line !min-h-9 !px-3 text-xs" disabled={!!busy || !downOk} onClick={() => pay(pl.orderId, `n${r.no}`)}>{busy === `${pl.orderId}:n${r.no}` ? 'اتصال...' : r.status === 'overdue' ? 'پرداخت قسط' : 'پرداخت زودتر'}</button>}</td></tr>)}</tbody></table></div>
+              </div>);
+          })}
       </section>
     </div>
   );

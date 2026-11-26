@@ -8,7 +8,7 @@ import { rateLimit, tooMany } from '@/lib/rate-limit';
 import { getUser } from '@/lib/user-session';
 import { createPayToken } from '@/lib/auth';
 import { releaseExpiredOrders, payUrl } from '@/lib/payment';
-import { runAssessment, evaluateRequest } from '@/lib/credit-service';
+import { runAssessment, evaluateRequest, exposureOf } from '@/lib/credit-service';
 import { POLICY } from '@/lib/credit-policy';
 export const dynamic = 'force-dynamic';
 
@@ -63,9 +63,9 @@ export async function POST(req) {
     let credit, instPlan;
     if (method === 'installment') {
       const { profile, assessment } = await runAssessment(user.id, 'order');
-      const ev = evaluateRequest({ profile, assessment, total, months, downPct });
+      const ev = evaluateRequest({ profile, assessment, total, months, downPct, exposure: await exposureOf(user.id) }); // سقف تجمعی: مانده‌ی اقساط قبلی هم حساب می‌شود
       if (!ev.ok) throw Object.assign(new Error('credit'), { userMsg: ev.message });
-      instPlan = { months, downPayment: ev.plan.downPayment, financed: ev.plan.financed, monthly: ev.plan.monthly };
+      instPlan = { months, downPayment: ev.plan.downPayment, financed: ev.plan.financed, monthly: ev.plan.monthly, down: { status: 'unpaid' } }; // پیش‌پرداخت بعد از تأیید مدیر با درگاه
       credit = { assessment: assessment._id, score: assessment.score, riskLevel: assessment.riskLevel, limit: assessment.creditLimit, recommendation: assessment.recommendation, rule: ev.rule };
     }
     let order;

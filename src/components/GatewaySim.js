@@ -6,7 +6,7 @@ import { SITE } from '@/lib/site';
 import { useStore } from './store';
 
 // شبیه‌ساز درگاه پرداخت: به بانک واقعی وصل نیست و اطلاعات کارت دریافت/ذخیره نمی‌کند.
-export default function GatewaySim({ token, code, total, expiresAt }) {
+export default function GatewaySim({ token, code, total, expiresAt, label, returnTo }) {
   const router = useRouter();
   const { clear } = useStore();
   const [left, setLeft] = useState(null); // در سرور null تا hydration ناسازگار نشود
@@ -26,6 +26,7 @@ export default function GatewaySim({ token, code, total, expiresAt }) {
       const d = await r.json().catch(() => ({}));
       if (result === 'success') {
         if (!r.ok || !d.ok) throw new Error(d.error || 'پرداخت انجام نشد');
+        if (returnTo) { router.replace(returnTo); return; } // پرداخت اقساط: بازگشت به جدول اقساط
         clear();
         try { sessionStorage.removeItem('mb_checkout'); } catch {}
         router.replace(`/order/success?code=${d.code}&method=cash`);
@@ -47,6 +48,7 @@ export default function GatewaySim({ token, code, total, expiresAt }) {
         <div className="space-y-2 text-sm">
           <div className="flex justify-between"><span className="text-ink-500">پذیرنده</span><b>{SITE.name}</b></div>
           <div className="flex justify-between"><span className="text-ink-500">کد سفارش</span><b dir="ltr">{code}</b></div>
+          {label && <div className="flex justify-between gap-4"><span className="text-ink-500">بابت</span><b className="text-left">{label}</b></div>}
           <div className="flex justify-between border-t border-ink-100 pt-3"><span className="font-bold">مبلغ قابل پرداخت</span><b className="text-lg">{Number(total).toLocaleString('fa-IR')} تومان</b></div>
         </div>
         {failed ? (

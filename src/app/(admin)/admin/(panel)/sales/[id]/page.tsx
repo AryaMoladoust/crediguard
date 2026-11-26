@@ -17,7 +17,7 @@ type Detail = {
   next: string[];
   userId: string | null;
   credit: { score: number; riskLevel: string; limit: number; recommendation: string; rule: string } | null;
-  installment: { months: number; downPayment: number; financed: number; monthly: number; schedule: { no: number; dueDate: string; amount: number; status: "due" | "paid" | "overdue"; paidAt: string | null }[] } | null;
+  installment: { months: number; down?: { status: "unpaid" | "paid" | null; paidAt: string | null; ref: string }; downPayment: number; financed: number; monthly: number; schedule: { no: number; dueDate: string; amount: number; status: "due" | "paid" | "overdue"; paidAt: string | null }[] } | null;
 };
 const STEPS = ["pending", "confirmed", "shipped", "completed"];
 const PAY: Record<string, string> = { paid: "پرداخت‌شده", unpaid: "پرداخت‌نشده", failed: "ناموفق" };
@@ -83,7 +83,7 @@ export default function OrderDetailPage() {
         </Panel>
         {o.method === "installment" && <Panel title="اقساط و اعتبارسنجی" subtitle="پیشنهاد ایجنت و جدول اقساط (جدول بعد از «تأیید سفارش» ساخته می‌شود)">
           {o.credit ? <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}><Badge tone="info">امتیاز {fa(o.credit.score)}</Badge><Badge tone={RISK[o.credit.riskLevel][1]}>ریسک {RISK[o.credit.riskLevel][0]}</Badge><Badge tone={REC[o.credit.recommendation][1]}>پیشنهاد: {REC[o.credit.recommendation][0]}</Badge><Badge tone="purple">سقف {fa(o.credit.limit)}</Badge>{o.userId && <Link className="table-action-link" href={`/admin/risk/${o.userId}`}>پرونده‌ی اعتباری</Link>}</div> : <p className="muted-cell">اطلاعات اعتبارسنجی برای این سفارش ثبت نشده (سفارش قدیمی).</p>}
-          {o.installment && <p className="muted-cell" style={{ marginBottom: 10 }}>{fa(o.installment.months)} قسط · پیش‌پرداخت {fa(o.installment.downPayment)} · مبلغ اقساطی {fa(o.installment.financed)} · قسط ماهانه {fa(o.installment.monthly)} تومان</p>}
+          {o.installment && <p className="muted-cell" style={{ marginBottom: 10 }}>{fa(o.installment.months)} قسط · پیش‌پرداخت {fa(o.installment.downPayment)} · مبلغ اقساطی {fa(o.installment.financed)} · قسط ماهانه {fa(o.installment.monthly)} تومان{" "}{o.installment.down?.status && <Badge tone={o.installment.down.status === "paid" ? "success" : "warning"}>{o.installment.down.status === "paid" ? `پیش‌پرداخت پرداخت‌شده${o.installment.down.paidAt ? ` · ${jDate(o.installment.down.paidAt)}` : ""}` : "پیش‌پرداخت در انتظار پرداخت مشتری (قبل از آن ارسال ممکن نیست)"}</Badge>}</p>}
           {o.installment?.schedule.length ? <Table empty="" headers={["قسط", "سررسید", "مبلغ (تومان)", "وضعیت", ""]} rows={o.installment.schedule.map(r => [fa(r.no), jDate(r.dueDate), fa(r.amount), <Badge tone={r.status === "paid" ? "success" : r.status === "overdue" ? "danger" : "neutral"}>{r.status === "paid" ? "پرداخت‌شده" : r.status === "overdue" ? "معوق" : "در انتظار"}</Badge>, r.status === "paid" ? <small className="muted-cell">{r.paidAt ? jDate(r.paidAt) : ""}</small> : <Button variant="secondary" disabled={busy} onClick={() => payInstallment(r.no)}>ثبت پرداخت</Button>])}/> : <p className="muted-cell">جدول اقساط هنوز ساخته نشده است.</p>}
         </Panel>}
         <Panel title="سابقه‌ی سفارش" subtitle="رویدادها از قدیم به جدید">

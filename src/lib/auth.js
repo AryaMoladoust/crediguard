@@ -89,3 +89,20 @@ export async function verifyPayToken(token, secret) {
   if (ver !== 'p1' || !/^[0-9a-f]{24}$/.test(oid || '') || !(Number(exp) > Date.now() / 1000)) return null;
   return safeEqual(token.slice(i + 1), await hmac(payload, secret)) ? oid : null;
 }
+
+// ---- توکن پرداخت اقساط: q1.<orderId>.<target>.<exp>.<sig> — ۳۰ دقیقه اعتبار
+// target: down (پیش‌پرداخت) | all (تسویه‌ی همه) | n<شماره قسط>. فقط پس از ورود مشتری و بررسی مالکیت سفارش صادر می‌شود.
+export const INST_WINDOW_SEC = 30 * 60;
+export async function createInstToken(oid, target, secret) {
+  const payload = `q1.${oid}.${target}.${Math.floor(Date.now() / 1000) + INST_WINDOW_SEC}`;
+  return `${payload}.${await hmac(payload, secret)}`;
+}
+export async function verifyInstToken(token, secret) {
+  if (!token || !secret || secret.length < 16) return null;
+  const i = token.lastIndexOf('.');
+  if (i < 0) return null;
+  const payload = token.slice(0, i);
+  const [ver, oid, target, exp] = payload.split('.');
+  if (ver !== 'q1' || !/^[0-9a-f]{24}$/.test(oid || '') || !/^(down|all|n\d{1,2})$/.test(target || '') || !(Number(exp) > Date.now() / 1000)) return null;
+  return safeEqual(token.slice(i + 1), await hmac(payload, secret)) ? { oid, target, exp: Number(exp) } : null;
+}

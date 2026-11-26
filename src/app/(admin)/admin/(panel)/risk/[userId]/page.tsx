@@ -13,7 +13,11 @@ type D = {
   assessment: { score: number; riskLevel: string; creditLimit: number; recommendation: string; summary: string; reasons: { label: string; delta: number }[]; flags: { code: string; severity: string; text: string }[]; metrics: { dti: number; monthlyCapacity: number }; engine: string; at: string };
   history: { score: number; riskLevel: string; creditLimit: number; recommendation: string; trigger: string; at: string }[];
   orders: { id: string; code: string; total: number; method: string; status: string; createdAt: string; credit: { rule: string; recommendation: string } | null }[];
-  installments: { overdueCount: number; overdueAmount: number };
+  installments: {
+    overdueCount: number; overdueAmount: number; maxDaysLate: number; totalCount: number; paidCount: number; paidAmount: number; remainingCount: number; remainingAmount: number; downDueCount: number; downDueAmount: number;
+    next: { no: number; code: string; dueDate: string; amount: number; daysLeft: number } | null;
+    plans: { code: string; orderId: string; total: number; months: number; monthly: number; remainingAmount: number; paidCount: number; remainingCount: number; down: { amount: number; status: string; paidAt: string | null }; schedule: { no: number; dueDate: string; amount: number; status: string; paidAt: string | null; daysLeft: number | null; daysLate: number | null }[] }[];
+  };
 };
 const NUM: [string, string][] = [["monthlyIncome", "درآمد ماهانه"], ["accountBalance", "موجودی حساب (فرضی)"], ["monthlyObligations", "تعهدات ماهانه"], ["totalDebt", "مجموع بدهی"], ["activeLoans", "تسهیلات فعال"], ["overdueInstallments", "اقساط معوق"], ["maxDelayDays", "حداکثر تأخیر (روز)"], ["bouncedCheques", "چک برگشتی"], ["onTimePayments", "اقساط به‌موقع"], ["latePayments", "اقساط با تأخیر"], ["recentInquiries", "استعلام ۶ماهه"], ["accountAgeMonths", "عمر حساب (ماه)"]];
 const BOOL: [string, string][] = [["everDefaulted", "سابقه‌ی نکول"], ["blacklisted", "فهرست سیاه"], ["hasChequebook", "دسته‌چک دارد"]];
@@ -64,6 +68,19 @@ export default function RiskDetailPage() {
             <Button icon={<Save size={14}/>} disabled={busy || !changed || reason.trim().length < 3} onClick={() => post({ action: "adjust", changes, reason }, "داده‌ی آزمایشی به‌روز و تحلیل دوباره انجام شد")}>ذخیره و تحلیل مجدد</Button>
             <Button variant="secondary" icon={<RotateCcw size={14}/>} disabled={busy || reason.trim().length < 3} onClick={() => { if (confirm("داده‌ی آزمایشی به مقدار پایه‌ی شبیه‌ساز برگردانده شود؟")) post({ action: "reset_sim", reason }, "داده‌ی آزمایشی به حالت پایه برگشت"); }}>بازگشت به مقدار پایه</Button></div>
           {d.profile.adjustments.length > 0 && <div className="timeline-list" style={{ marginTop: 14 }}>{d.profile.adjustments.map((x, i) => <div className="timeline-item" key={i}><span className="timeline-icon info"><Save size={14}/></span><div><b>{x.reason}</b><small>{jDateTime(x.at)} · {x.by}</small></div></div>)}</div>}
+        </Panel>
+        <Panel title="اقساط مشتری" subtitle={`${fa(d.installments.totalCount)} قسط · ${fa(d.installments.paidCount)} پرداخت‌شده · ${fa(d.installments.remainingCount)} مانده (${fa(d.installments.remainingAmount)} تومان)`}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+            {d.installments.overdueCount ? <Badge tone="danger">{fa(d.installments.overdueCount)} قسط معوق · {fa(d.installments.overdueAmount)} تومان · {d.installments.maxDaysLate > 0 ? `${fa(d.installments.maxDaysLate)} روز تأخیر` : "امروز سررسید"}</Badge> : <Badge tone="success">بدون قسط معوق</Badge>}
+            {d.installments.next && <Badge tone="info">قسط بعدی {fa(d.installments.next.amount)} تومان · {fa(d.installments.next.daysLeft)} روز دیگر</Badge>}
+            {d.installments.downDueCount > 0 && <Badge tone="warning">{fa(d.installments.downDueCount)} پیش‌پرداخت پرداخت‌نشده ({fa(d.installments.downDueAmount)} تومان)</Badge>}
+          </div>
+          {d.installments.plans.length === 0 ? <p className="muted-cell">هنوز جدول اقساطی ساخته نشده است.</p> : d.installments.plans.map(pl => <div key={pl.code} style={{ marginBottom: 16 }}>
+            <p style={{ marginBottom: 6 }}><Link className="mono link-text" href={`/admin/sales/${pl.orderId}`}><b>{pl.code}</b></Link> <small className="muted-cell">· {fa(pl.paidCount)} از {fa(pl.months)} قسط پرداخت‌شده · مانده {fa(pl.remainingAmount)} تومان · پیش‌پرداخت {fa(pl.down.amount)} {pl.down.status === "paid" ? "(پرداخت‌شده)" : "(پرداخت‌نشده)"}</small></p>
+            <Table empty="" headers={["قسط", "سررسید", "مبلغ (تومان)", "وضعیت", "زمان"]} rows={pl.schedule.map(r => [fa(r.no), jDate(r.dueDate), fa(r.amount),
+              <Badge tone={r.status === "paid" ? "success" : r.status === "overdue" ? "danger" : "neutral"}>{r.status === "paid" ? "پرداخت‌شده" : r.status === "overdue" ? "معوق" : "در انتظار"}</Badge>,
+              r.status === "paid" ? <small className="muted-cell">{r.paidAt ? jDate(r.paidAt) : ""}</small> : r.status === "overdue" ? <small style={{ color: "#b91c1c", fontWeight: 700 }}>{(r.daysLate ?? 0) > 0 ? `${fa(r.daysLate ?? 0)} روز تأخیر` : "امروز سررسید"}</small> : <small className="muted-cell">{fa(r.daysLeft ?? 0)} روز تا سررسید</small>])}/>
+          </div>)}
         </Panel>
         <Panel title="سفارش‌های مشتری" subtitle={`${fa(d.orders.length)} سفارش`}>
           <Table empty="سفارشی نیست" headers={["سفارش", "تاریخ", "مبلغ (تومان)", "روش", "بررسی اعتبار", "وضعیت"]} rows={d.orders.map(o => [<Link className="mono link-text" href={`/admin/sales/${o.id}`}><b>{o.code}</b></Link>, jDate(o.createdAt), fa(o.total), METHOD[o.method], o.credit ? (RULE[o.credit.rule] || o.credit.rule) : "—", <Badge tone={statusTone(o.status)}>{ORDER_STATUS[o.status]}</Badge>])}/>

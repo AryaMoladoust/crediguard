@@ -1,7 +1,7 @@
 import { connectDB } from '@/lib/db';
 import { getUser } from '@/lib/user-session';
 import { rateLimit, tooMany } from '@/lib/rate-limit';
-import { runAssessment, evaluateRequest } from '@/lib/credit-service';
+import { runAssessment, evaluateRequest, exposureOf } from '@/lib/credit-service';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
@@ -16,6 +16,6 @@ export async function POST(req) {
   if (!Number.isFinite(total) || total <= 0 || total > 5e9) return Response.json({ error: 'مبلغ نامعتبر' }, { status: 400 });
   await connectDB();
   const { profile, assessment } = await runAssessment(u.id, 'customer');
-  const r = evaluateRequest({ profile, assessment, total, months, downPct });
-  return Response.json({ ok: r.ok, message: r.message, plan: r.plan, limit: r.limit, rule: r.rule });
+  const r = evaluateRequest({ profile, assessment, total, months, downPct, exposure: await exposureOf(u.id) });
+  return Response.json({ ok: r.ok, message: r.message, plan: r.plan, limit: r.limit, available: r.available, rule: r.rule });
 }
