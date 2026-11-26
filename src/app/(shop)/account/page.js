@@ -5,6 +5,7 @@ import { getUser } from '@/lib/user-session';
 import { connectDB } from '@/lib/db';
 import Order from '@/models/Order';
 import ProfileForm from '@/components/ProfileForm';
+import AccountNav from '@/components/AccountNav';
 import { ORDER_STATUS, METHOD_LABEL, fmtDate } from '@/lib/format';
 
 export const metadata = { title: 'حساب کاربری' };
@@ -18,6 +19,7 @@ export default async function Account() {
   return (
     <div className="wrap py-8">
       <h1 className="text-2xl sm:text-3xl">سلام، {user.name}</h1>
+      <AccountNav active="/account" />
       <div className="mt-6 grid gap-6 lg:grid-cols-[22rem_1fr]">
         <ProfileForm user={user} />
         <section className="card p-5 sm:p-6">

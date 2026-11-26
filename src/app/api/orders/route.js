@@ -8,13 +8,15 @@ import { rateLimit, tooMany } from '@/lib/rate-limit';
 import { getUser } from '@/lib/user-session';
 import { createPayToken } from '@/lib/auth';
 import { releaseExpiredOrders, payUrl } from '@/lib/payment';
+import { runAssessment, evaluateRequest } from '@/lib/credit-service';
+import { POLICY } from '@/lib/credit-policy';
 export const dynamic = 'force-dynamic';
 
 const bad = (error, status = 400) => Response.json({ error }, { status });
 
 // ثبت سفارش از فروشگاه: قیمت از دیتابیس خوانده می‌شود و موجودی به‌صورت اتمیک کم می‌شود
 export async function POST(req) {
-  if (!rateLimit(req, 'orders', 10, 10 * 60_000)) return tooMany();
+  if (!(await rateLimit(req, 'orders', 10, 10 * 60_000))) return tooMany();
   let b;
   try { b = await req.json(); } catch { return bad('درخواست نامعتبر'); }
 
@@ -23,6 +25,7 @@ export async function POST(req) {
   const address = String(b?.customer?.address ?? '').trim();
   const note = String(b?.note ?? '').trim().slice(0, 500);
   const method = b?.method === 'installment' ? 'installment' : 'cash';
+  const months = Number(b?.installment?.months), downPct = Number(b?.installment?.downPct);
   if (name.length < 2 || name.length > 80) return bad('نام و نام خانوادگی نامعتبر است');
   if (!/^09\d{9}$/.test(phone)) return bad('شماره موبایل نامعتبر است');
   if (address.length < 5 || address.length > 500) return bad('آدرس نامعتبر است');
@@ -39,6 +42,11 @@ export async function POST(req) {
   await connectDB();
   await releaseExpiredOrders().catch(() => {}); // آزادکردن موجودیِ سفارش‌های پرداخت‌نشده‌ی منقضی
   const user = await getUser();
+  if (method === 'installment') { // خرید اقساطی فقط با حساب واردشده، موبایل تأییدشده و کد ملی ثبت‌شده
+    if (!user) return bad('برای خرید اقساطی ابتدا وارد حساب شوید یا ثبت‌نام کنید', 401);
+    if (!user.nationalIdMasked || !user.phoneVerified) return bad('پرونده‌ی اعتباری ناقص است: کد ملی و تأیید موبایل را در «اعتبار و اقساط» حساب خود تکمیل کنید', 403);
+    if (!POLICY.monthOptions.includes(months) || !POLICY.downPaymentOptions.includes(downPct)) return bad('مدت اقساط یا پیش‌پرداخت نامعتبر است');
+  }
   const taken = []; // برای برگشت در صورت خطا
   const lines = [];
   try {
@@ -52,10 +60,18 @@ export async function POST(req) {
       lines.push({ product: p._id, name: p.name, price: p.price, qty });
     }
     const total = lines.reduce((s, l) => s + l.price * l.qty, 0);
+    let credit, instPlan;
+    if (method === 'installment') {
+      const { profile, assessment } = await runAssessment(user.id, 'order');
+      const ev = evaluateRequest({ profile, assessment, total, months, downPct });
+      if (!ev.ok) throw Object.assign(new Error('credit'), { userMsg: ev.message });
+      instPlan = { months, downPayment: ev.plan.downPayment, financed: ev.plan.financed, monthly: ev.plan.monthly };
+      credit = { assessment: assessment._id, score: assessment.score, riskLevel: assessment.riskLevel, limit: assessment.creditLimit, recommendation: assessment.recommendation, rule: ev.rule };
+    }
     let order;
     for (let attempt = 0; attempt < 5 && !order; attempt++) {
       try {
-        order = await Order.create({ code: `ORD-${randomInt(100000, 999999)}`, customer: { name, phone, address }, items: lines, total, method, note: note || undefined, user: user?.id, ...(method === 'cash' && { status: AWAITING_PAYMENT, payment: { status: 'unpaid' } }) });
+        order = await Order.create({ code: `ORD-${randomInt(100000, 999999)}`, customer: { name, phone, address }, items: lines, total, method, note: note || undefined, user: user?.id, ...(instPlan && { installment: instPlan, credit }), ...(method === 'cash' && { status: AWAITING_PAYMENT, payment: { status: 'unpaid' } }) });
       } catch (e) { if (e?.code !== 11000) throw e; }
     }
     if (!order) throw new Error('order-create-failed');

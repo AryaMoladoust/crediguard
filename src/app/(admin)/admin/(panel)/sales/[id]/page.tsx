@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowRight, MapPin, Phone, Truck, CheckCircle2, CheckCheck, XCircle } from "lucide-react";
 import { Badge, Button, EmptyState, PageHeader, Panel, Table } from "@/admin/components/ui";
-import { fa, jDateTime, METHOD, ORDER_STATUS, statusTone, useApi } from "@/admin/lib/api";
+import { fa, jDate, jDateTime, METHOD, ORDER_STATUS, statusTone, useApi, RISK, REC } from "@/admin/lib/api";
 
 type Detail = {
   id: string; code: string; status: string; method: "cash" | "installment"; total: number; note: string;
@@ -15,6 +15,9 @@ type Detail = {
   payment: { status: "unpaid" | "paid" | "failed" | null; ref: string; paidAt: string | null };
   history: { status: string; at: string; by: string }[];
   next: string[];
+  userId: string | null;
+  credit: { score: number; riskLevel: string; limit: number; recommendation: string; rule: string } | null;
+  installment: { months: number; downPayment: number; financed: number; monthly: number; schedule: { no: number; dueDate: string; amount: number; status: "due" | "paid" | "overdue"; paidAt: string | null }[] } | null;
 };
 const STEPS = ["pending", "confirmed", "shipped", "completed"];
 const PAY: Record<string, string> = { paid: "پرداخت‌شده", unpaid: "پرداخت‌نشده", failed: "ناموفق" };
@@ -38,6 +41,16 @@ export default function OrderDetailPage() {
       const res = await fetch(`/api/admin/orders/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) setActionError(d.error || "تغییر وضعیت ناموفق بود");
+    } finally { setBusy(false); reload(); }
+  }
+
+  async function payInstallment(no: number) {
+    if (!window.confirm(`پرداخت قسط ${fa(no)} ثبت شود؟`)) return;
+    setBusy(true); setActionError("");
+    try {
+      const res = await fetch(`/api/admin/orders/${id}/installments`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ no }) });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) setActionError(d.error || "ثبت پرداخت قسط ناموفق بود");
     } finally { setBusy(false); reload(); }
   }
 
@@ -68,6 +81,11 @@ export default function OrderDetailPage() {
             [<b>جمع کل سفارش</b>, "", "", <b>{fa(o.total)}</b>],
           ]}/>
         </Panel>
+        {o.method === "installment" && <Panel title="اقساط و اعتبارسنجی" subtitle="پیشنهاد ایجنت و جدول اقساط (جدول بعد از «تأیید سفارش» ساخته می‌شود)">
+          {o.credit ? <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}><Badge tone="info">امتیاز {fa(o.credit.score)}</Badge><Badge tone={RISK[o.credit.riskLevel][1]}>ریسک {RISK[o.credit.riskLevel][0]}</Badge><Badge tone={REC[o.credit.recommendation][1]}>پیشنهاد: {REC[o.credit.recommendation][0]}</Badge><Badge tone="purple">سقف {fa(o.credit.limit)}</Badge>{o.userId && <Link className="table-action-link" href={`/admin/risk/${o.userId}`}>پرونده‌ی اعتباری</Link>}</div> : <p className="muted-cell">اطلاعات اعتبارسنجی برای این سفارش ثبت نشده (سفارش قدیمی).</p>}
+          {o.installment && <p className="muted-cell" style={{ marginBottom: 10 }}>{fa(o.installment.months)} قسط · پیش‌پرداخت {fa(o.installment.downPayment)} · مبلغ اقساطی {fa(o.installment.financed)} · قسط ماهانه {fa(o.installment.monthly)} تومان</p>}
+          {o.installment?.schedule.length ? <Table empty="" headers={["قسط", "سررسید", "مبلغ (تومان)", "وضعیت", ""]} rows={o.installment.schedule.map(r => [fa(r.no), jDate(r.dueDate), fa(r.amount), <Badge tone={r.status === "paid" ? "success" : r.status === "overdue" ? "danger" : "neutral"}>{r.status === "paid" ? "پرداخت‌شده" : r.status === "overdue" ? "معوق" : "در انتظار"}</Badge>, r.status === "paid" ? <small className="muted-cell">{r.paidAt ? jDate(r.paidAt) : ""}</small> : <Button variant="secondary" disabled={busy} onClick={() => payInstallment(r.no)}>ثبت پرداخت</Button>])}/> : <p className="muted-cell">جدول اقساط هنوز ساخته نشده است.</p>}
+        </Panel>}
         <Panel title="سابقه‌ی سفارش" subtitle="رویدادها از قدیم به جدید">
           <div className="timeline-list">{events.map((e, i) => <div className="timeline-item" key={i}><span className="timeline-icon info"><CheckCircle2 size={15}/></span><div><b>{e.label}</b><small>{jDateTime(e.at)}{e.by ? ` · ${e.by}` : ""}</small></div></div>)}</div>
         </Panel>

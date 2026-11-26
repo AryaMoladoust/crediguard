@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 // پیگیری سفارش: کد سفارش + شماره موبایل ثبت‌شده
 export async function POST(req) {
-  if (!rateLimit(req, 'track', 20, 10 * 60_000)) return tooMany();
+  if (!(await rateLimit(req, 'track', 20, 10 * 60_000))) return tooMany();
   let b; try { b = await req.json(); } catch { return Response.json({ error: 'درخواست نامعتبر' }, { status: 400 }); }
   const code = toLatinDigits(b?.code).trim().toUpperCase();
   const phone = toLatinDigits(b?.phone).replace(/\s|-/g, '');

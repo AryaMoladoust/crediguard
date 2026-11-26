@@ -54,3 +54,8 @@ export function useDebounced<T>(value: T, ms = 350) {
   useEffect(() => { const t = setTimeout(() => setV(value), ms); return () => clearTimeout(t); }, [value, ms]);
   return v;
 }
+
+// برچسب‌های اعتبار و ریسک (مشترک بین صفحه‌ها)
+export const RISK: Record<string, [string, "success" | "warning" | "danger" | "info"]> = { low: ["کم", "success"], medium: ["متوسط", "info"], high: ["بالا", "warning"], critical: ["بحرانی", "danger"] };
+export const REC: Record<string, [string, "success" | "warning" | "danger"]> = { approve: ["تأیید", "success"], review: ["نیازمند بررسی", "warning"], reject: ["رد", "danger"] };
+export const DEC: Record<string, string> = { auto: "طبق قوانین سیستم", approved: "تأیید دستی مدیر", rejected: "رد توسط مدیر", review: "در حال بررسی مدیر" };

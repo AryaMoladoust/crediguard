@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function POST(req) {
-  if (!rateLimit(req, 'login', 10, 15 * 60_000)) return tooMany();
+  if (!(await rateLimit(req, 'login', 10, 15 * 60_000))) return tooMany();
   let b; try { b = await req.json(); } catch { return Response.json({ error: 'درخواست نامعتبر' }, { status: 400 }); }
   const phone = toLatinDigits(b?.phone).replace(/\s|-/g, '');
   const password = String(b?.password ?? '');
