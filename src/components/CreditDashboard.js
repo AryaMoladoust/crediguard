@@ -73,7 +73,7 @@ export default function CreditDashboard() {
             : <><p className="mt-3 text-3xl font-extrabold">{fa(pu?.available)} <small className="text-sm font-semibold text-ink-400">تومان</small></p>
               <p className="mt-2 text-xs leading-6 text-ink-500">حداکثر مبلغ اقساطی که الان می‌توانید بگیرید. با پیش‌پرداخت {fa(10)}٪ تا حدود <b className="text-ink">{fa(pu?.maxTotal)} تومان</b> کالا می‌توانید بخرید. با پرداخت اقساط، این مبلغ آزاد می‌شود.</p>
               {pu?.used > 0 && <p className="mt-2 text-xs text-ink-500">از سقف {fa(pu.limit)} تومان، {fa(pu.used)} تومان درگیر اقساط جاری است.</p>}</>}
-          <p className="mt-2 text-[11px] text-ink-400">تأیید نهایی هر سفارش با مدیر فروشگاه است.</p></div>
+          <p className="mt-2 text-[11px] text-ink-400">پرونده‌های عادی خودکار بررسی می‌شوند و فقط موارد پرریسک به مدیر ارجاع می‌شوند.</p></div>
         <div className="card p-5"><h2 className="text-base">وضعیت اقساط</h2>
           <dl className="mt-3 grid grid-cols-3 gap-2 text-center">{[['کل اقساط', inst.totalCount], ['پرداخت‌شده', inst.paidCount], ['باقی‌مانده', inst.remainingCount]].map(([k, v]) => <div key={k} className="rounded-xl bg-ink-50 p-2"><dd className="text-xl font-extrabold">{fa(v)}</dd><dt className="text-[11px] text-ink-500">{k}</dt></div>)}</dl>
           <p className="mt-3 text-sm text-ink-500">مانده‌ی بدهی اقساط: <b className="text-ink">{fa(inst.remainingAmount)} تومان</b></p></div>
@@ -85,10 +85,10 @@ export default function CreditDashboard() {
 
       {inst.awaiting.length > 0 && <section className="card p-5"><h2 className="flex items-center gap-2 text-base"><Clock3 size={18} />در انتظار تأیید مدیر</h2>
         <ul className="mt-3 space-y-2 text-sm">{inst.awaiting.map((a) => <li key={a.code} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-ink-50 p-3"><b dir="ltr">{a.code}</b><span className="text-ink-500">{fa(a.months)} قسط {fa(a.monthly)} تومانی · پیش‌پرداخت {fa(a.downPayment)} تومان</span></li>)}</ul>
-        <p className="mt-2 text-xs text-ink-500">بعد از تأیید مدیر، پیش‌پرداخت (قسط اول) و جدول اقساط همین‌جا برای پرداخت با درگاه نمایش داده می‌شود.</p></section>}
+        <p className="mt-2 text-xs text-ink-500">پس از تصمیم مدیر، امکان پرداخت پیش‌پرداخت و جدول اقساط همین‌جا نمایش داده می‌شود.</p></section>}
 
       <section className="card p-5 sm:p-6"><h2 className="text-lg">اقساط من</h2>
-        {!inst.plans.length ? <p className="mt-4 flex items-center gap-2 text-sm text-ink-500"><Clock3 size={16} />جدول اقساط بعد از تأیید سفارش اقساطی توسط مدیر اینجا ساخته می‌شود.</p> :
+        {!inst.plans.length ? <p className="mt-4 flex items-center gap-2 text-sm text-ink-500"><Clock3 size={16} />جدول اقساط پس از تأیید خودکار یا تصمیم مدیر در این بخش نمایش داده می‌شود.</p> :
           inst.plans.map((pl) => {
             const downOk = pl.down.status === 'paid';
             const open = pl.schedule.filter((r) => r.status !== 'paid');

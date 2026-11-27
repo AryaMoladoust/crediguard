@@ -110,12 +110,17 @@ export function evaluateRequest({ profile, assessment, total, downPct, months, e
   const plan = planOf(total, downPct, months);
   const available = Math.max(0, assessment.creditLimit - exposure.outstanding);
   const out = { plan, limit: assessment.creditLimit, available, recommendation: assessment.recommendation };
-  const dec = profile.decision?.status;
+  const dec = profile.decision?.status || 'auto';
   if (dec === 'rejected') return { ...out, ok: false, rule: 'admin_rejected', message: 'خرید اقساطی برای حساب شما فعال نیست؛ با پشتیبانی تماس بگیرید' };
-  if (assessment.recommendation === 'reject' && dec !== 'approved') return { ...out, ok: false, rule: 'risk_rejected', message: 'در حال حاضر امکان خرید اقساطی برای شما وجود ندارد' };
+
+  // مدیر فقط پرونده‌های پرریسک/مشکوک یا پرونده‌ای را که صراحتاً برای بررسی علامت زده، بررسی می‌کند.
+  const manualReview = dec === 'review' || ['high', 'critical'].includes(assessment.riskLevel) ||
+    (assessment.flags || []).some((f) => ['high', 'critical'].includes(f.severity));
+  if (manualReview && dec !== 'approved') return { ...out, ok: true, rule: 'needs_review', message: 'پرونده‌ی شما دارای نشانه‌ی پرریسک است و برای بررسی مدیر ثبت می‌شود؛ پس از تصمیم مدیر، امکان پرداخت پیش‌پرداخت فعال خواهد شد' };
+
+  if (assessment.recommendation === 'reject' && dec !== 'approved') return { ...out, ok: false, rule: 'risk_rejected', message: 'بر اساس ارزیابی خودکار، در حال حاضر امکان خرید اقساطی برای شما وجود ندارد' };
   if (plan.financed > available && dec !== 'approved') return { ...out, ok: false, rule: 'over_limit', message: `مبلغ اقساطی (${plan.financed.toLocaleString('fa-IR')} تومان) از سقف قابل‌استفاده‌ی شما (${available.toLocaleString('fa-IR')} تومان) بیشتر است${exposure.outstanding ? ' (مانده‌ی اقساط قبلی از سقف کم شده است)' : ''}؛ پیش‌پرداخت را بیشتر کنید یا کالای دیگری انتخاب کنید` };
   const capacity = (assessment.metrics?.monthlyCapacity ?? 0) - exposure.monthly;
   if (plan.monthly > capacity && dec !== 'approved') return { ...out, ok: false, rule: 'over_capacity', message: `قسط ماهانه (${plan.monthly.toLocaleString('fa-IR')} تومان) از ظرفیت پرداخت شما بیشتر است؛ مدت اقساط را بیشتر یا پیش‌پرداخت را بالاتر انتخاب کنید` };
-  const auto = assessment.recommendation === 'approve' && (!dec || dec === 'auto' || dec === 'approved');
-  return { ...out, ok: true, rule: auto ? 'within_limit' : 'needs_review', message: auto ? 'درخواست شما در محدوده‌ی اعتبار است و برای تأیید نهایی به مدیر ارسال می‌شود' : 'درخواست شما برای بررسی دستی به مدیر ارسال می‌شود' };
+  return { ...out, ok: true, rule: dec === 'approved' ? 'manager_approved' : 'auto_approved', message: dec === 'approved' ? 'درخواست شما با تصمیم مدیر تأیید شد؛ برای پرداخت پیش‌پرداخت به درگاه آزمایشی منتقل می‌شوید' : 'اعتبار شما به‌صورت خودکار تأیید شد؛ پس از ثبت سفارش برای پرداخت پیش‌پرداخت به درگاه آزمایشی منتقل می‌شوید' };
 }

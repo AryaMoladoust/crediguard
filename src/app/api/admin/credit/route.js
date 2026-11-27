@@ -16,7 +16,7 @@ export async function GET(req) {
     await connectDB();
     const f = { latest: true };
     if (['approve', 'review', 'reject'].includes(sp.get('recommendation'))) f.recommendation = sp.get('recommendation');
-    if (['low', 'medium', 'high', 'critical'].includes(sp.get('risk'))) f.riskLevel = sp.get('risk');
+    f.$or = [{ riskLevel: { $in: ['high', 'critical'] } }, { flags: { $elemMatch: { severity: { $in: ['high', 'critical'] } } } }];
     const q = (sp.get('q') || '').trim().slice(0, 60);
     if (q) { const re = new RegExp(escapeRegex(q), 'i'); f.user = { $in: (await User.find({ $or: [{ name: re }, { phone: re }] }).select('_id').limit(300).lean()).map((u) => u._id) }; }
     const [rows, total, agg] = await Promise.all([
@@ -28,7 +28,7 @@ export async function GET(req) {
     const dec = new Map(profiles.map((p) => [String(p.user), p.decision?.status || 'auto']));
     const by = Object.fromEntries(agg.map((a) => [a._id, a.n]));
     return Response.json({
-      items: rows.filter((r) => r.user).map((r) => ({ userId: String(r.user._id), name: r.user.name, phone: r.user.phone, nationalId: r.user.nationalIdMasked || '', score: r.score, riskLevel: r.riskLevel, creditLimit: r.creditLimit, recommendation: r.recommendation, decision: dec.get(String(r.user._id)) || 'auto', flags: (r.flags || []).length, at: r.createdAt })),
+      items: rows.filter((r) => r.user).map((r) => ({ userId: String(r.user._id), name: r.user.name, phone: r.user.phone, nationalId: r.user.nationalIdMasked || '', score: r.score, riskLevel: r.riskLevel, creditLimit: r.creditLimit, recommendation: r.recommendation, decision: (['high', 'critical'].includes(r.riskLevel) || (r.flags || []).some((x) => ['high', 'critical'].includes(x.severity))) && (dec.get(String(r.user._id)) || 'auto') === 'auto' ? 'review' : (dec.get(String(r.user._id)) || 'auto'), flags: (r.flags || []).length, at: r.createdAt })),
       total, page, pageSize: PAGE, pages: Math.max(1, Math.ceil(total / PAGE)),
       summary: { approve: by.approve || 0, review: by.review || 0, reject: by.reject || 0, all: (by.approve || 0) + (by.review || 0) + (by.reject || 0) }
     });

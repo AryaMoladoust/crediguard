@@ -86,6 +86,10 @@ const ass = { creditLimit: 20_000_000, recommendation: 'approve', metrics: { mon
 const prof = { decision: { status: 'auto' } };
 assert.equal(purchaseCapacity({ profile: prof, assessment: ass, exposure: ex }).available, 7_000_000);
 assert.equal(purchaseCapacity({ profile: { decision: { status: 'rejected' } }, assessment: ass }).blocked, true);
+const autoDecision = evaluateRequest({ profile: prof, assessment: { ...ass, riskLevel: 'low', flags: [] }, total: 10_000_000, downPct: 10, months: 6, exposure: { outstanding: 0, monthly: 0 } });
+assert.equal(autoDecision.ok, true); assert.equal(autoDecision.rule, 'auto_approved');
+const manualDecision = evaluateRequest({ profile: prof, assessment: { ...ass, riskLevel: 'high', flags: [{ severity: 'high', code: 'risk_pattern' }] }, total: 10_000_000, downPct: 10, months: 6, exposure: { outstanding: 0, monthly: 0 } });
+assert.equal(manualDecision.ok, true); assert.equal(manualDecision.rule, 'needs_review');
 assert.equal(evaluateRequest({ profile: prof, assessment: ass, total: 10_000_000, downPct: 10, months: 6, exposure: { outstanding: 0, monthly: 0 } }).ok, true);
 assert.equal(evaluateRequest({ profile: prof, assessment: ass, total: 10_000_000, downPct: 10, months: 6, exposure: ex }).rule, 'over_limit');
 const sched = buildSchedule({ months: 3, financed: 10_000_000, monthly: 3_333_000 }, NOW);

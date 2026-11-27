@@ -6,9 +6,9 @@ import Product from '@/models/Product';
 import { toInt, toLatinDigits } from '@/lib/catalog';
 import { rateLimit, tooMany } from '@/lib/rate-limit';
 import { getUser } from '@/lib/user-session';
-import { createPayToken } from '@/lib/auth';
+import { createPayToken, createInstToken } from '@/lib/auth';
 import { releaseExpiredOrders, payUrl } from '@/lib/payment';
-import { runAssessment, evaluateRequest, exposureOf } from '@/lib/credit-service';
+import { runAssessment, evaluateRequest, exposureOf, buildSchedule } from '@/lib/credit-service';
 import { POLICY } from '@/lib/credit-policy';
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +30,7 @@ export async function POST(req) {
   if (!/^09\d{9}$/.test(phone)) return bad('شماره موبایل نامعتبر است');
   if (address.length < 5 || address.length > 500) return bad('آدرس نامعتبر است');
   if (!Array.isArray(b.items) || b.items.length < 1 || b.items.length > 20) return bad('سبد خرید نامعتبر است');
-  if (method === 'cash' && (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 16)) return bad('SESSION_SECRET تنظیم نشده است', 500);
+  if ((method === 'cash' || method === 'installment') && (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 16)) return bad('SESSION_SECRET تنظیم نشده است', 500);
 
   const wanted = new Map(); // productId -> qty (ادغام ردیف‌های تکراری)
   for (const it of b.items) {
@@ -65,19 +65,22 @@ export async function POST(req) {
       const { profile, assessment } = await runAssessment(user.id, 'order');
       const ev = evaluateRequest({ profile, assessment, total, months, downPct, exposure: await exposureOf(user.id) }); // سقف تجمعی: مانده‌ی اقساط قبلی هم حساب می‌شود
       if (!ev.ok) throw Object.assign(new Error('credit'), { userMsg: ev.message });
-      instPlan = { months, downPayment: ev.plan.downPayment, financed: ev.plan.financed, monthly: ev.plan.monthly, down: { status: 'unpaid' } }; // پیش‌پرداخت بعد از تأیید مدیر با درگاه
+      instPlan = { months, downPayment: ev.plan.downPayment, financed: ev.plan.financed, monthly: ev.plan.monthly, down: { status: 'unpaid' }, ...(['auto_approved', 'manager_approved'].includes(ev.rule) && { schedule: buildSchedule({ months, financed: ev.plan.financed, monthly: ev.plan.monthly }) }) };
       credit = { assessment: assessment._id, score: assessment.score, riskLevel: assessment.riskLevel, limit: assessment.creditLimit, recommendation: assessment.recommendation, rule: ev.rule };
     }
     let order;
     for (let attempt = 0; attempt < 5 && !order; attempt++) {
       try {
-        order = await Order.create({ code: `ORD-${randomInt(100000, 999999)}`, customer: { name, phone, address }, items: lines, total, method, note: note || undefined, user: user?.id, ...(instPlan && { installment: instPlan, credit }), ...(method === 'cash' && { status: AWAITING_PAYMENT, payment: { status: 'unpaid' } }) });
+        const autoInstallment = method === 'installment' && ['auto_approved', 'manager_approved'].includes(credit?.rule);
+        order = await Order.create({ code: `ORD-${randomInt(100000, 999999)}`, customer: { name, phone, address }, items: lines, total, method, note: note || undefined, user: user?.id, ...(instPlan && { installment: instPlan, credit }), ...(method === 'cash' && { status: AWAITING_PAYMENT, payment: { status: 'unpaid' } }), ...(autoInstallment && { status: 'confirmed', history: [{ status: 'confirmed', at: new Date(), by: credit?.rule === 'auto_approved' ? 'اعتبارسنج خودکار rules-v1' : 'تأیید قبلی مدیر' }] }) });
       } catch (e) { if (e?.code !== 11000) throw e; }
     }
     if (!order) throw new Error('order-create-failed');
     // سفارش نقدی: کاربر به درگاه پرداخت می‌رود؛ تأیید فقط بعد از پرداخت موفق انجام می‌شود
-    const pay = method === 'cash' ? payUrl(await createPayToken(String(order._id), process.env.SESSION_SECRET)) : undefined;
-    return Response.json({ ok: true, code: order.code, total, payUrl: pay }, { status: 201 });
+    let pay;
+    if (method === 'cash') pay = payUrl(await createPayToken(String(order._id), process.env.SESSION_SECRET));
+    else if (['auto_approved', 'manager_approved'].includes(credit?.rule)) pay = payUrl(await createInstToken(String(order._id), 'down', process.env.SESSION_SECRET));
+    return Response.json({ ok: true, code: order.code, total, payUrl: pay, review: method === 'installment' && credit?.rule === 'needs_review' }, { status: 201 });
   } catch (e) {
     await Promise.all(taken.map(([pid, qty]) => Product.updateOne({ _id: pid }, { $inc: { stock: qty, sold: -qty } })));
     if (e.userMsg) return bad(e.userMsg, 409);

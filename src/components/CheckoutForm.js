@@ -49,7 +49,7 @@ export default function CheckoutForm() {
       if (!res.ok) throw new Error(d.error || 'ثبت سفارش انجام نشد');
       // در خرید نقدی، سبد تا تأیید موفق پرداخت حفظ می‌شود؛ در اقساطی ثبت درخواست کافی است.
       if (method === 'installment') { clear(); try { sessionStorage.removeItem(DRAFT); } catch {} }
-      router.push(d.payUrl || `/order/success?code=${d.code}&method=${method}`);
+      router.push(d.payUrl || `/order/success?code=${d.code}&method=${method}${d.review ? '&review=1' : ''}`);
     } catch (x) { setErr(x.message); setBusy(false); }
   }
 
@@ -71,7 +71,7 @@ export default function CheckoutForm() {
           <section className="card p-5 sm:p-6">
             <h2 className="mb-4 text-lg">روش پرداخت</h2>
             <div className="grid gap-3 sm:grid-cols-2">
-              {[['cash', Banknote, 'پرداخت نقدی', 'پرداخت آنلاین در درگاه؛ بعد از پرداخت موفق، سفارش خودکار تأیید می‌شود'], ['installment', CreditCard, 'درخواست خرید اقساطی', 'پس از بررسی اعتبار و تأیید مدیر، جدول اقساط شما ساخته می‌شود']].map(([v, I, t, s]) => (
+              {[['cash', Banknote, 'پرداخت نقدی', 'پرداخت آنلاین در درگاه؛ بعد از پرداخت موفق، سفارش خودکار تأیید می‌شود'], ['installment', CreditCard, 'خرید اقساطی', 'پرونده‌های عادی خودکار تأیید می‌شوند؛ فقط موارد پرریسک برای بررسی مدیر ارسال می‌شوند']].map(([v, I, t, s]) => (
                 <label key={v} className={`flex cursor-pointer gap-3 rounded-2xl p-4 ring-2 transition ${method === v ? 'bg-brand-50 ring-brand' : 'ring-ink-100 hover:ring-ink-200'}`}>
                   <input type="radio" name="method" className="mt-1 accent-brand" checked={method === v} onChange={() => setMethod(v)} />
                   <span><b className="flex items-center gap-1.5 text-sm"><I size={17} className="text-brand" />{t}</b><small className="mt-1 block leading-6 text-ink-500">{s}</small></span>
@@ -98,7 +98,7 @@ export default function CheckoutForm() {
           <div className="flex justify-between border-t border-ink-100 pt-4 text-sm"><span className="text-ink-500">ارسال</span><b>{total >= SITE.freeShipping ? 'رایگان' : 'پس از ثبت اعلام می‌شود'}</b></div>
           <div className="flex justify-between"><span className="font-bold">مبلغ کل</span><b className="text-lg">{total.toLocaleString('fa-IR')} تومان</b></div>
           {err && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{err}</p>}
-          <button className="btn btn-primary w-full !min-h-12" disabled={busy || (method === 'installment' && (!loggedIn || !elig || elig.busy || !elig.ok))}>{busy ? 'در حال ثبت سفارش...' : method === 'cash' ? 'ثبت سفارش و رفتن به درگاه پرداخت' : 'ثبت نهایی سفارش'}</button>
+          <button className="btn btn-primary w-full !min-h-12" disabled={busy || (method === 'installment' && (!loggedIn || !elig || elig.busy || !elig.ok))}>{busy ? 'در حال ثبت سفارش...' : method === 'cash' ? 'ثبت سفارش و رفتن به درگاه پرداخت' : 'ثبت سفارش اقساطی'}</button>
         </aside>
       </form>
     </div>
