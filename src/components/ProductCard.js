@@ -28,7 +28,7 @@ export default function ProductCard({ p, priority }) {
         <h3 className="mt-0.5 line-clamp-2 min-h-[2.8rem] text-sm font-bold leading-6">
           <Link href={href} className="hover:text-brand-600">{p.name}</Link>
         </h3>
-        {p.stock > 0 && p.stock <= 5 && <span className="mt-1 text-xs font-semibold text-amber-600">فقط {p.stock.toLocaleString('fa-IR')} عدد در انبار مانده</span>}
+        {p.stock > 0 && <span className={`mt-1 text-xs font-semibold ${p.stock <= 5 ? 'text-amber-600' : 'text-emerald-700'}`}>موجودی انبار: {p.stock.toLocaleString('fa-IR')} عدد</span>}
         <div className="mt-auto flex items-end justify-between gap-2 pt-3">
           <div>
             {off > 0 && <div className="text-xs text-ink-400 line-through">{p.oldPrice.toLocaleString('fa-IR')}</div>}

@@ -64,7 +64,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return <div className={`app-frame ${mobileOpen ? "mobile-nav-open" : ""}`}>
     {mobileOpen && <button className="mobile-scrim" onClick={() => setMobileOpen(false)} aria-label="بستن منو"/>}
     <aside className="sidebar">
-      <div className="brand-row"><div className="brand-symbol"><ShieldCheck size={21}/></div><div className="brand-copy"><strong>{t("brand")}</strong><span>{isFa ? "مدیریت هوشمند فروشگاه" : "Smart store management"}</span></div><button className="mobile-close icon-button" onClick={() => setMobileOpen(false)}><X size={18}/></button></div>
+      <div className="brand-row"><img className="admin-brand-logo" src="/mobiler-logo.jpeg" alt="لوگوی موبایلر"/><div className="brand-copy"><strong>{t("brand")}</strong><span>{isFa ? "مدیریت هوشمند فروشگاه" : "Smart store management"}</span></div><button className="mobile-close icon-button" onClick={() => setMobileOpen(false)}><X size={18}/></button></div>
       <div className="nav-caption">{isFa ? "فضای کاری" : "WORKSPACE"}</div>
       <nav className="side-nav">
         {routes.filter(item => !item.ownerOnly || me?.role === "owner").map(item => {

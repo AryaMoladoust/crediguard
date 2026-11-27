@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap');
+@font-face{font-family:'Vazirmatn';src:url('/fonts/Vazirmatn-Variable.woff2') format('woff2');font-style:normal;font-weight:100 900;font-display:swap}
 
 :root{
  --bg:#090e18;--sidebar:#111a29;--surface:#111b2b;--surface-2:#152136;--surface-3:#1b2a42;--border:#263651;--border-soft:rgba(124,153,198,.13);
@@ -68,3 +68,28 @@ html[dir="ltr"] .bar-group small{direction:ltr}html[dir="ltr"] .sub-nav{margin:3
 .reason-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;font-size:10px}.reason-list li{display:flex;justify-content:space-between;gap:10px}
 .pos{color:var(--green)}.neg{color:var(--red)}
 @media(max-width:900px){.chat-layout{grid-template-columns:1fr}.chat-msg{max-width:94%}}
+
+/* Readability and branding refinements */
+.admin-brand-logo{width:48px;height:48px;flex:none;object-fit:contain;border-radius:12px;background:#fff;box-shadow:0 5px 16px rgba(0,0,0,.14)}
+body{font-size:15px}
+.nav-link{font-size:14px}.nav-caption{font-size:11px}.sub-nav a{font-size:12px}.user-meta b{font-size:12px}.user-meta span{font-size:11px}
+.breadcrumb{font-size:13px}.breadcrumb b{font-size:14px}.global-search input{font-size:13px}.toggle-group button{font-size:12px}
+.page-header h1{font-size:27px}.page-header p{font-size:14px}.eyebrow{font-size:11px}.btn{font-size:13px}.btn-small{font-size:12px}
+.stat-label{font-size:13px}.stat-value{font-size:27px}.panel-title,.panel h2{font-size:17px}
+.table-toolbar .search-field input{font-size:13px}.table-toolbar .select-field select{font-size:12px}.data-table{font-size:13px}.data-table th{font-size:12px}.data-table td{font-size:13px}
+.pagination{font-size:12px}.pagination button{font-size:12px}.form-field,.form-field>span{font-size:13px}.form-field input,.form-field select,.form-field textarea{font-size:14px}
+.kv-list div,.reason-list{font-size:13px}.flow-steps span{font-size:12px}.chat-item b{font-size:14px}.chat-item small{font-size:12px}.chat-msg{font-size:13px}.chat-msg small{font-size:11px}.chat-reply textarea{font-size:13px}.edit-grid label{font-size:12px}.edit-grid input,.field-text{font-size:13px}
+/* The icon on the left is separate from the password visibility control. */
+.mobiler-admin-login .input-with-icon>svg{inset-inline-start:13px;inset-inline-end:auto;z-index:1;pointer-events:none}
+.mobiler-admin-login .input-with-icon input{height:50px;padding-inline-start:42px;padding-inline-end:48px;font-size:14px}
+.mobiler-admin-login .admin-password-toggle{inset-inline-end:9px;inset-inline-start:auto;z-index:3;width:34px;height:34px;border-radius:8px}
+.mobiler-admin-login .admin-password-toggle:hover{background:var(--surface-3);color:var(--text)}
+.mobiler-admin-login .form-field>span{font-size:14px}.mobiler-admin-login .login-card-top h1{font-size:25px}.mobiler-admin-login .login-card-top p{font-size:13px}.mobiler-admin-login .login-form{gap:18px}.mobiler-admin-login .login-options,.mobiler-admin-login .login-security,.mobiler-admin-login .admin-back-store{font-size:12px}
+.mobiler-login-brand>img{width:54px;height:54px;object-fit:contain;border-radius:13px;background:#fff;box-shadow:0 8px 22px rgba(0,0,0,.18)}
+.mobiler-admin-login .login-side-copy{position:relative;padding-inline-start:4px}.mobiler-admin-login .login-side-copy h2{font-size:39px}.mobiler-admin-login .login-side-copy p{font-size:15px;line-height:2}
+.login-hero-logo{display:block;width:min(250px,58%);aspect-ratio:1;object-fit:contain;border-radius:26px;background:#fff;box-shadow:0 24px 70px rgba(0,0,0,.3);margin-bottom:26px}
+.mobiler-admin-login .login-page::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 70% 40%,rgba(244,111,35,.18),transparent 36%),linear-gradient(125deg,transparent 42%,rgba(255,255,255,.025) 42.2%,transparent 42.6%)}
+@media(max-width:1020px){.login-hero-logo{width:180px;margin:0 auto 15px}.mobiler-admin-login .login-side-copy h2{font-size:30px}}
+@media(max-width:760px){.page-header h1{font-size:22px}.page-header p{font-size:12px}.stat-label{font-size:11px}.stat-value{font-size:22px}.data-table td{font-size:12px}.mobiler-admin-login .login-card-top h1{font-size:22px}.mobiler-admin-login .login-side-copy p{font-size:12px}.login-hero-logo{width:112px;margin:0 auto 8px}.mobiler-admin-login .login-side-copy h2{font-size:23px}}
+.mobiler-admin-login .admin-password-toggle svg{position:static;inset:auto;top:auto;transform:none;width:19px;height:19px;color:inherit}
+.page-content :is(.nav-link,.sub-nav a,.stat-label,.table-toolbar,.data-table,.table-footer,.empty-state,.kv-list,.reason-list,.flow-steps,.notification-item,.audit-policy-row,.settings-menu,.integration-grid,.role-cards,.chart-summary,.form-grid,.edit-grid,.chat-layout,.pagination,.product-form-layout){font-size:max(12px,1em)}

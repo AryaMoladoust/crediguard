@@ -19,9 +19,10 @@ export function CustomersTable({ mode = "all" }: { mode?: Mode }) {
   const unavailable = mode === "overdue" || mode === "blocked";
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("recent");
+  const [kind, setKind] = useState("all");
   const [page, setPage] = useState(1);
   const dq = useDebounced(query);
-  const filters = { q: dq, sort, mode: mode === "new" ? "new" : "" };
+  const filters = { q: dq, sort, mode: mode === "new" ? "new" : "", kind };
   // صفحه‌بندی، جست‌وجو و مرتب‌سازی سمت سرور؛ کارت‌های بالا خلاصه‌ی کل مشتریان‌اند، نه فقط این صفحه
   const { data, error, loading } = useApi<CustomersPage>(unavailable ? "" : `/api/admin/customers${qs({ ...filters, page, pageSize: PAGE_SIZE })}`, 30000);
   const list = data?.items ?? [];
@@ -43,7 +44,7 @@ export function CustomersTable({ mode = "all" }: { mode?: Mode }) {
       <StatCard label="مجموع خرید" value={fa(sum?.spent ?? 0)} hint="تومان (بدون لغوشده)" icon={<Wallet size={18}/>} tone="amber"/>
     </div>
     <Panel title="فهرست مشتریان" subtitle={`${fa(data?.total ?? 0)} مشتری مطابق فیلترها`}>
-      <div className="table-toolbar"><SearchInput value={query} onChange={v => { setQuery(v); setPage(1); }} placeholder="نام یا شماره موبایل..."/><SelectField value={sort} onChange={v => { setSort(v); setPage(1); }} options={[{ label: "مرتب‌سازی: آخرین سفارش", value: "recent" }, { label: "بیشترین خرید", value: "spent" }, { label: "بیشترین سفارش", value: "orders" }]}/></div>
+      <div className="table-toolbar"><SearchInput value={query} onChange={v => { setQuery(v); setPage(1); }} placeholder="نام یا شماره موبایل..."/><SelectField value={sort} onChange={v => { setSort(v); setPage(1); }} options={[{ label: "مرتب‌سازی: آخرین سفارش", value: "recent" }, { label: "بیشترین خرید", value: "spent" }, { label: "بیشترین سفارش", value: "orders" }]}/><SelectField value={kind} onChange={v => { setKind(v); setPage(1); }} options={[{ label: "همه مشتریان", value: "all" }, { label: "مشتریان تکراری", value: "repeat" }, { label: "خریداران اقساطی", value: "installment" }, { label: "خریداران نقدی", value: "cash" }]}/></div>
       <Table empty={loading ? "در حال بارگذاری..." : dq ? "مشتری‌ای مطابق جست‌وجو پیدا نشد" : "هنوز مشتری‌ای ثبت نشده است"} headers={["مشتری", "شماره موبایل", "تعداد سفارش", "مجموع خرید (تومان)", "سفارش اقساطی", "آخرین سفارش", "پرونده"]} rows={list.map(c => [
         <Link className="table-person table-person-link" href={`/admin/customers/${c.phone}`}><Avatar name={c.name} size="sm"/><div><b>{c.name}</b></div></Link>,
         <span className="mono muted-cell">{c.phone}</span>, fa(c.orders), fa(c.spent),

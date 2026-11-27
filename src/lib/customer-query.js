@@ -28,6 +28,10 @@ function rowMatch(sp) {
   const q = (sp.get('q') || '').trim().slice(0, 80);
   if (q) { const re = new RegExp(escapeRegex(q), 'i'); and.push({ $or: [{ name: re }, { _id: re }] }); }
   if (sp.get('mode') === 'new') and.push({ first: { $gte: new Date(Date.now() - NEW_DAYS * 86400000) } });
+  const kind = sp.get('kind');
+  if (kind === 'repeat') and.push({ activeOrders: { $gt: 1 } });
+  if (kind === 'installment') and.push({ installmentOrders: { $gt: 0 } });
+  if (kind === 'cash') and.push({ installmentOrders: 0, activeOrders: { $gt: 0 } });
   return and.length ? { $and: and } : {};
 }
 export const sortOf = (sp) => SORTS[sp.get('sort')] || SORTS.recent;
