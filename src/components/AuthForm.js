@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, CreditCard } from 'lucide-react';
 
 export default function AuthForm({ mode }) {
   const reg = mode === 'register';
@@ -24,9 +24,12 @@ export default function AuthForm({ mode }) {
   }
   const ltr = { textAlign: 'right' };
   return (
-    <div className="wrap grid min-h-[70vh] place-items-center py-10">
-      <form onSubmit={submit} className="card w-full max-w-md space-y-4 p-6 sm:p-8">
-        <div><h1 className="text-2xl">{reg ? 'ساخت حساب کاربری' : 'ورود به حساب'}</h1><p className="mt-1 text-sm text-ink-500">{reg ? 'با حساب کاربری، خرید اقساطی، سفارش‌ها و پرونده‌ی اعتباری‌تان را مدیریت کنید.' : 'برای دیدن سفارش‌ها و اقساط وارد شوید.'}</p></div>
+    <div className="credit-auth-page">
+      <div className="credit-auth-glow credit-auth-glow-one"/><div className="credit-auth-glow credit-auth-glow-two"/>
+      <div className="credit-auth-wrap">
+        <aside className="credit-auth-visual"><img src="/etebaryar-logo.jpeg" alt="نشان اعتبار یار"/><span className="credit-auth-kicker">ETEBAR YAR • SMART CREDIT</span><h2>اعتبار هوشمند، خرید آسوده</h2><p>مدیریت اعتبار، پرداخت اقساط و پیگیری وضعیت درخواست‌ها در یک حساب امن.</p><div className="credit-auth-points"><span><ShieldCheck size={16}/> ارزیابی اعتبار</span><span><CreditCard size={16}/> مدیریت اقساط</span></div></aside>
+      <form onSubmit={submit} className="card credit-auth-card w-full max-w-md space-y-4 p-6 sm:p-8">
+        <div className="credit-auth-heading"><img src="/etebaryar-logo.jpeg" alt="اعتبار یار"/><div><span>خوش آمدید به اعتبار یار</span><h1>{reg ? 'ساخت حساب کاربری' : 'ورود به حساب'}</h1></div></div><p className="credit-auth-description">{reg ? 'حساب خود را بسازید و خرید اقساطی و پرونده اعتباری‌تان را مدیریت کنید.' : 'برای مشاهده اعتبار، سفارش‌ها و اقساط وارد حساب خود شوید.'}</p>
         {reg && <label className="field">نام و نام خانوادگی<input className="input" required minLength={2} autoComplete="name" value={f.name} onChange={set('name')} /></label>}
         <label className="field">شماره موبایل<input className="input" dir="ltr" style={ltr} required inputMode="numeric" autoComplete="username" value={f.phone} onChange={set('phone')} placeholder="09123456789" /></label>
         {reg && <label className="field">کد ملی<input className="input" dir="ltr" style={ltr} required inputMode="numeric" maxLength={10} autoComplete="off" value={f.nationalId} onChange={set('nationalId')} placeholder="۱۰ رقم" /></label>}
@@ -38,6 +41,7 @@ export default function AuthForm({ mode }) {
         <button className="btn btn-primary w-full !min-h-12" disabled={busy}>{busy ? 'لطفاً صبر کنید...' : reg ? 'ثبت‌نام' : 'ورود'}</button>
         <p className="text-center text-sm text-ink-500">{reg ? 'حساب دارید؟' : 'حساب ندارید؟'} <Link href={reg ? '/account/login' : '/account/register'} className="font-bold text-brand-600">{reg ? 'وارد شوید' : 'ثبت‌نام کنید'}</Link></p>
       </form>
+      </div>
     </div>
   );
 }
