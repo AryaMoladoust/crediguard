@@ -1,12 +1,18 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { PageHeader, Panel, Button } from "@/admin/components/ui";
-import { Save } from "lucide-react";
+import { Save, LogOut } from "lucide-react";
 
 type Basic = { siteName: string; supportPhone: string; showInventoryCount: boolean; allowRegistration: boolean };
 const initial: Basic = { siteName: "", supportPhone: "", showInventoryCount: true, allowRegistration: true };
 
 export default function SettingsPage() {
+  const router = useRouter();
+  async function logout() {
+    try { await fetch("/api/admin/logout", { method: "POST" }); } catch {}
+    router.push("/admin/login"); router.refresh();
+  }
   const [data, setData] = useState<Basic>(initial);
   const [canEdit, setCanEdit] = useState(false);
   const [busy, setBusy] = useState(true);
@@ -67,6 +73,9 @@ export default function SettingsPage() {
           </div>
         </Panel>
       )}
+      <Panel title="حساب کاربری" subtitle="خروج از پنل مدیریت روی همین دستگاه.">
+        <div className="basic-settings"><div className="bs-actions"><Button variant="secondary" onClick={logout} icon={<LogOut size={15} />}>خروج از حساب</Button></div></div>
+      </Panel>
     </>
   );
 }

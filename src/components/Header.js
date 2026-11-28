@@ -50,7 +50,7 @@ export default function Header({ user, site }) {
         <div className="wrap flex h-16 items-center gap-3 sm:gap-5">
           <button type="button" className="grid size-10 place-items-center rounded-xl hover:bg-ink-50 lg:hidden" onClick={() => setOpen(true)} aria-label="باز کردن منو"><Menu /></button>
           <Link href="/" className="flex items-center gap-2 text-xl font-black" aria-label={`${siteName} — صفحه اصلی`}>
-            <img src="/mobiler-logo.jpeg" alt="لوگوی موبایلر" className="h-11 w-11 rounded-xl object-contain" />
+            <img src="/mobiler-orange.jpeg" alt="لوگوی موبایلر" className="h-11 w-11 rounded-xl object-contain" />
             <span className="hidden sm:inline">{siteName}</span>
           </Link>
           <nav className="mr-4 hidden items-center gap-1 lg:flex" aria-label="منوی اصلی">

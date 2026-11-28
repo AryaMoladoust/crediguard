@@ -63,7 +63,7 @@ export default function CreditDashboard() {
   const pu = d.purchase, inst = d.installments;
   return (
     <div className="mt-6 space-y-6">
-      <div className="flex items-center gap-3 rounded-2xl border border-ink-100 bg-white p-3 shadow-sm"><img src="/etebaryar-logo.jpeg" alt="لوگوی اعتبار یار" className="h-14 w-14 rounded-xl object-contain"/><div><b className="text-base">اعتبار یار</b><p className="text-xs text-ink-500">مدیریت اعتبار و خرید اقساطی</p></div></div>
+      <div className="flex items-center gap-3 rounded-2xl border border-ink-100 bg-white p-3 shadow-sm"><img src="/etebaryar-blue.jpeg" alt="لوگوی اعتبار یار" className="h-14 w-14 rounded-xl object-contain"/><div><b className="text-base">اعتبار یار</b><p className="text-xs text-ink-500">مدیریت اعتبار و خرید اقساطی</p></div></div>
       {justPaid && <p role="status" className="flex items-center gap-2 rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-700"><BadgeCheck size={18} />پرداخت با موفقیت ثبت شد.</p>}
       {payErr && <p role="alert" className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-700">{payErr}</p>}
 
