@@ -7,12 +7,14 @@ import { toLatinDigits } from '@/lib/catalog';
 import { rateLimit, tooMany } from '@/lib/rate-limit';
 import { isValidNationalId, normalizeNationalId, hashNationalId, maskNationalId } from '@/lib/national-id';
 import { runAssessment } from '@/lib/credit-service';
+import { getSettings } from '@/lib/settings';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 const bad = (error, status = 400) => Response.json({ error }, { status });
 
 export async function POST(req) {
   if (!(await rateLimit(req, 'register', 8, 60 * 60_000))) return tooMany();
+  if (!(await getSettings()).allowRegistration) return bad('ثبت‌نام کاربران جدید فعلاً غیرفعال است', 403);
   if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 16) return bad('SESSION_SECRET تنظیم نشده است', 500);
   let b; try { b = await req.json(); } catch { return bad('درخواست نامعتبر'); }
   const name = String(b?.name ?? '').trim();

@@ -1,9 +1,11 @@
 import { Phone, Mail, MapPin, Clock3 } from 'lucide-react';
 import ContactForm from '@/components/ContactForm';
 import { SITE } from '@/lib/site';
+import { getSettings } from '@/lib/settings';
 export const metadata = { title: 'تماس با ما' };
-export default function Contact() {
-  const rows = [[Phone, 'تلفن پشتیبانی', SITE.phone], [Mail, 'ایمیل', SITE.email], [MapPin, 'نشانی', SITE.address], [Clock3, 'ساعت پاسخ‌گویی', SITE.hours]];
+export default async function Contact() {
+  const { supportPhone } = await getSettings();
+  const rows = [[Phone, 'تلفن پشتیبانی', supportPhone], [Mail, 'ایمیل', SITE.email], [MapPin, 'نشانی', SITE.address], [Clock3, 'ساعت پاسخ‌گویی', SITE.hours]];
   return (
     <div className="wrap py-10">
       <h1 className="text-2xl sm:text-3xl">تماس با ما</h1>

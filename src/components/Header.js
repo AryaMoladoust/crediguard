@@ -10,7 +10,8 @@ import SmartImg from './SmartImg';
 
 const NAV = [['خانه', '/'], ['همه محصولات', '/products'], ['پیگیری سفارش', '/track'], ['درباره ما', '/about'], ['تماس با ما', '/contact']];
 
-export default function Header({ user }) {
+export default function Header({ user, site }) {
+  const siteName = site?.siteName || SITE.name, phone = site?.supportPhone || SITE.phone, phoneRaw = site?.phoneRaw || SITE.phoneRaw;
   const { count, wish, ready } = useStore();
   const path = usePathname();
   const router = useRouter();
@@ -43,14 +44,14 @@ export default function Header({ user }) {
     <>
       <div className="hidden bg-ink text-xs text-white/85 sm:block"><div className="wrap flex h-9 items-center justify-between">
         <span>ارسال رایگان برای سفارش‌های بالای {(SITE.freeShipping / 1_000_000).toLocaleString('fa-IR')} میلیون تومان</span>
-        <a href={`tel:${SITE.phoneRaw}`} className="flex items-center gap-1.5 hover:text-white"><Phone size={13} /> مشاوره خرید: {SITE.phone}</a>
+        <a href={`tel:${phoneRaw}`} className="flex items-center gap-1.5 hover:text-white"><Phone size={13} /> مشاوره خرید: {phone}</a>
       </div></div>
       <header className="sticky top-0 z-50 border-b border-ink-100 bg-white/90 backdrop-blur-lg">
         <div className="wrap flex h-16 items-center gap-3 sm:gap-5">
           <button type="button" className="grid size-10 place-items-center rounded-xl hover:bg-ink-50 lg:hidden" onClick={() => setOpen(true)} aria-label="باز کردن منو"><Menu /></button>
-          <Link href="/" className="flex items-center gap-2 text-xl font-black" aria-label={`${SITE.name} — صفحه اصلی`}>
+          <Link href="/" className="flex items-center gap-2 text-xl font-black" aria-label={`${siteName} — صفحه اصلی`}>
             <img src="/mobiler-logo.jpeg" alt="لوگوی موبایلر" className="h-11 w-11 rounded-xl object-contain" />
-            <span className="hidden sm:inline">{SITE.name}</span>
+            <span className="hidden sm:inline">{siteName}</span>
           </Link>
           <nav className="mr-4 hidden items-center gap-1 lg:flex" aria-label="منوی اصلی">
             {NAV.map(([t, h]) => <Link key={h} href={h} className={`rounded-lg px-3 py-2 text-sm font-semibold transition hover:bg-ink-50 ${active(h) ? 'text-brand-600' : 'text-ink-700'}`}>{t}</Link>)}
